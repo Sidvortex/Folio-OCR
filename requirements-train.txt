@@ -1,0 +1,8 @@
+# Training and model inference (Kaggle / Colab / any CUDA machine).
+torch>=2.6
+torchvision>=0.21
+transformers==5.21.0
+peft>=0.17
+accelerate>=1.10
+bitsandbytes>=0.45; platform_system == "Linux"
+pytest>=8
