@@ -1,0 +1,14 @@
+# Rendering synthetic pages, scoring benchmarks, comparing results (no torch needed).
+# Then also: pip install --no-deps olmocr==0.4.27   (its test classes score olmOCR-style unit tests)
+numpy>=1.26
+pillow>=10.2
+opencv-python-headless>=4.9
+pypdfium2>=4.30
+playwright>=1.48
+faker>=30
+fonttools>=4.50
+rapidfuzz>=3.6
+beautifulsoup4>=4.12
+fuzzysearch>=0.7
+tqdm>=4.66
+pypdf>=5.2
