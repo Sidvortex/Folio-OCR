@@ -1,0 +1,4 @@
+# Phase 0 baselines only. Install in a separate session/notebook from training:
+# surya-ocr pins pillow<11 and its own opencv build.
+chandra-ocr[hf]==0.2.0
+surya-ocr==0.22.1
