@@ -44,16 +44,22 @@ def evaluate_records(parser, records: List[dict], tests_by_page: Optional[Dict[s
     secs = time.time() - t0
     err = tot = 0
     fields: Dict[str, List[int]] = {}
+    rows = []
     for r in recs:
         ref_md = to_markdown([Block.from_dict(b) for b in r["blocks"]]) if "blocks" in r else r.get("markdown", "")
         hyp_md = outputs[r["id"]].markdown
         e, n = cer(markdown_to_text(ref_md), markdown_to_text(hyp_md))
         err += e
         tot += n
+        f_ok = f_tot = 0
         for k, (f, t) in field_accuracy(ref_md, hyp_md).items():
             fields.setdefault(k, [0, 0])
             fields[k][0] += f
             fields[k][1] += t
+            f_ok, f_tot = f_ok + f, f_tot + t
+        # per-page rows: compare.py bootstraps CER and fields over pages with them
+        rows.append({"id": r["id"], "tier": r.get("condition") or r.get("source") or "all", "err": e, "chars": n,
+                     "fields": [f_ok, f_tot]})
     n = max(1, len(recs))
     m = {
         "pages": len(recs),
@@ -65,6 +71,7 @@ def evaluate_records(parser, records: List[dict], tests_by_page: Optional[Dict[s
         "truncated": sum(o.truncated for o in outputs.values()) / n,
         "tokens_per_page": sum(o.tokens for o in outputs.values()) / n,
         "seconds_per_page": secs / n,
+        "page_rows": rows,
     }
     if tests_by_page:
         from .unittests import score
