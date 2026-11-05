@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import json
 from collections import defaultdict
-from typing import Dict, Iterable, List, Optional
+from typing import Dict, Iterable, List
 
 _CACHE: Dict[str, object] = {}
 
@@ -38,10 +38,28 @@ def load_tests_jsonl(path: str) -> Dict[str, List[dict]]:
     return dict(by_page)
 
 
+_FIELDS: Dict[str, set] = {}
+
+
+def clean_test(t: dict) -> dict:
+    """Only the fields olmOCR's test class for this type accepts (its dataclasses reject
+    unknown keys such as our ``_category`` or another dataset's extra columns)."""
+    import dataclasses
+    T = _olmocr()
+    cls = {"present": T.TextPresenceTest, "absent": T.TextPresenceTest, "order": T.TextOrderTest,
+           "table": T.TableTest, "math": T.MathTest, "baseline": T.BaselineTest}.get(t.get("type"))
+    if cls is None:
+        return dict(t)
+    names = _FIELDS.get(cls.__name__)
+    if names is None:
+        names = _FIELDS[cls.__name__] = {f.name for f in dataclasses.fields(cls)}
+    return {k: v for k, v in t.items() if k in names}
+
+
 def _test_obj(t: dict):
     obj = _CACHE.get(t["id"])
     if obj is None:
-        obj = _CACHE[t["id"]] = _olmocr().load_single_test(dict(t))
+        obj = _CACHE[t["id"]] = _olmocr().load_single_test(clean_test(t))
     return obj
 
 
