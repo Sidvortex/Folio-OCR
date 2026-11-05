@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+# generated at the top level only (folioocr/data/ is code)
+/assets/
+/data/
+/runs/
+/results/
+/bench_cache/
+/out/
+/olmOCR-bench/
+/OmniDocBench/
+/resume_bench/
+*.safetensors
