@@ -1,0 +1,9 @@
+{
+ "name": "resume-v1",
+ "description": "Phase 1: synthetic resumes mixed with general renders so general skill is kept (the notebook's mix).",
+ "task_mix": "doc2json=0.8,doc2md=0.2",
+ "sources": [
+  {"labels": "data/resumes/labels.jsonl", "weight": 3, "role": "synthetic resumes"},
+  {"labels": "data/general/labels.jsonl", "weight": 2, "role": "our general renders"}
+ ]
+}
