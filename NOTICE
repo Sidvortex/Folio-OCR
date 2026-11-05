@@ -10,6 +10,10 @@ Third-party material in this repository, or fetched by it:
 * folioocr/imaging.py: smart_resize re-implements the resizing rule of
   qwen-vl-utils (Qwen team, Alibaba Cloud), Apache License 2.0.
 
+* folioocr/rl/teds.py implements TEDS (Zhong, ShafieiBavani and Jimeno Yepes,
+  "Image-based table recognition", ECCV 2020) on top of the apted package
+  (MIT License), which is installed separately.
+
 * olmocr (Allen Institute for AI), Apache License 2.0: used as a dependency
   (installed separately, not shipped). Its unit-test classes score
   olmOCR-Bench-style tests, and its table parser reads tables for
@@ -27,4 +31,8 @@ Third-party material in this repository, or fetched by it:
 * Models and datasets are downloaded by the user and keep their own licences.
   Infinity-Parser2-Flash is Apache-2.0. Chandra and Surya weights are not
   open-source licensed; this code only runs them as baselines, and their
-  outputs must not be used as training data (see docs/PHASES.md).
+  outputs must not be used as training data (label_teachers.py refuses them).
+  Infinity-Doc2-5M is CC BY-NC-SA 4.0 (academic use only); olmOCR-mix and
+  olmOCR-synthmix are ODC-BY; LightOnOCR-mix follows Common Crawl's and
+  Digital Corpora's terms. folioocr/data/sources/common.py keeps one licence
+  line per source, and make_data_card.py reports them.
