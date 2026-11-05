@@ -12,3 +12,11 @@ __pycache__/
 /OmniDocBench/
 /resume_bench/
 *.safetensors
+/models/
+/teach/
+/holdout/
+/holdout_src/
+/olmocr-mix/
+/synthmix/
+/pdfa/
+/eval_index.npz
