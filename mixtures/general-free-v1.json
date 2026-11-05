@@ -1,0 +1,13 @@
+{
+ "name": "general-free-v1",
+ "description": "Phase 2 on free GPUs: no non-commercial source, every part downloadable in a Kaggle session. Weighted toward old scans, multi-column pages and tables, olmOCR-Bench's weak categories.",
+ "task_mix": "doc2json=0.7,doc2md=0.3",
+ "sources": [
+  {"labels": "data/olmocr_docs/labels.clean.jsonl", "weight": 0.20, "role": "olmOCR-mix 00_documents, real PDFs"},
+  {"labels": "data/olmocr_hist/labels.clean.jsonl", "weight": 0.15, "role": "olmOCR-mix 02_loc + 03_national_archives, historical scans"},
+  {"labels": "data/render_old/labels.clean.jsonl", "weight": 0.20, "role": "our renders, old-scan and scan degradations"},
+  {"labels": "data/render_layout/labels.clean.jsonl", "weight": 0.15, "role": "our renders: two-column articles, tables, math"},
+  {"labels": "data/synthmix/labels.clean.jsonl", "weight": 0.15, "role": "olmOCR-synthmix training pairs (arXiv, tables)"},
+  {"labels": "data/resumes/labels.jsonl", "weight": 0.15, "role": "synthetic resumes, so Phase 1's skill stays"}
+ ]
+}
