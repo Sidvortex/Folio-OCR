@@ -22,6 +22,8 @@ def main() -> None:
     ap.add_argument("--tests", default=None)
     ap.add_argument("--name", required=True)
     ap.add_argument("--split", default="dev")
+    ap.add_argument("--where", nargs="*", default=[],
+                    help="keep records whose field has this value, e.g. condition=old columns=2 source=olmocr-mix-1025")
     ap.add_argument("--limit", type=int, default=None)
     ap.add_argument("--results", default="results/dev")
     ap.add_argument("--model", default="infly/Infinity-Parser2-Flash")
@@ -41,8 +43,11 @@ def main() -> None:
     from folioocr.model.load import ModelConfig, load_model
 
     recs = read_labels(args.labels, None if args.split == "all" else args.split)
+    for cond in args.where:
+        k, _, v = cond.partition("=")
+        recs = [r for r in recs if str(r.get(k, (r.get("meta") or {}).get(k))) == v]
     if not recs:
-        ap.error(f"no pages with split={args.split} in {args.labels}")
+        ap.error(f"no pages with split={args.split} {' '.join(args.where)} in {args.labels}")
     tests = load_tests_jsonl(args.tests) if args.tests else None
     model, proc = load_model(ModelConfig(model=args.model, adapter=args.adapter, dtype=args.dtype, load_4bit=args.load_4bit))
     parser = PageParser(model, proc, task=args.task, max_pixels=args.max_pixels, batch_size=args.batch_size,
