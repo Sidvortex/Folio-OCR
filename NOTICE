@@ -1,0 +1,30 @@
+Folio-OCR
+=========
+
+Third-party material in this repository, or fetched by it:
+
+* folioocr/prompts.py: the doc2json and doc2md prompts are copied verbatim from
+  the infinity_parser2 package (Infinity-Parser2, INF Technology), Apache
+  License 2.0.
+
+* folioocr/imaging.py: smart_resize re-implements the resizing rule of
+  qwen-vl-utils (Qwen team, Alibaba Cloud), Apache License 2.0.
+
+* olmocr (Allen Institute for AI), Apache License 2.0: used as a dependency
+  (installed separately, not shipped). Its unit-test classes score
+  olmOCR-Bench-style tests, and its table parser reads tables for
+  table-neighbour tests.
+
+* folioocr/render/vocab.py and the page degradations in
+  folioocr/render/degrade.py come from ResumeOCR-Lite (the author's own
+  project).
+
+* Fetched at setup by fetch_assets.py, not shipped: KaTeX (MIT License) and font
+  families from google/fonts (SIL Open Font License 1.1, Apache License 2.0
+  or Ubuntu Font Licence, per family). Each family's licence file is saved
+  next to it under assets/fonts/.
+
+* Models and datasets are downloaded by the user and keep their own licences.
+  Infinity-Parser2-Flash is Apache-2.0. Chandra and Surya weights are not
+  open-source licensed; this code only runs them as baselines, and their
+  outputs must not be used as training data (see docs/PHASES.md).
