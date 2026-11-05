@@ -406,7 +406,7 @@ def resume_split(rng: random.Random, doc: ResumeDoc, st: Style) -> Tuple[str, st
 .cols > .c1 {{ width:{left_w}%; }}
 .cols > .c2 {{ flex:1; {'border-left:1px solid #bbb; padding-left:14px;' if rng.random() < 0.5 else ''} }}
 """
-    head = [f'<header style="margin-bottom:8px">']
+    head = ['<header style="margin-bottom:8px">']
     if doc.photo:
         sz = rng.randint(76, 100)
         head.append(f'<div data-cat="figure" style="float:left;margin-right:14px;width:{sz}px;height:{sz}px">{svg_photo(rng, sz)}</div>')

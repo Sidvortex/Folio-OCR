@@ -2,9 +2,6 @@
 
     python -m pytest -q tests
 """
-import json
-import random
-
 import pytest
 
 from folioocr import prompts

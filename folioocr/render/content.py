@@ -14,8 +14,8 @@ from typing import List, Optional, Sequence, Tuple
 
 from faker import Faker
 
-from .vocab import (CERTS, CITIES, COMMON_WORDS, COMPANIES, COURSES, DEGREES, DOMAINS, FIELDS, FIRST_NAMES,
-                    LANGS, LAST_NAMES, LEVELS, MONTHS, MONTHS_ABBR, REGIONS, SCHOOLS, SKILL_LABELS, SOFT_SKILLS,
+from .vocab import (CERTS, CITIES, COMMON_WORDS, COURSES, DEGREES, DOMAINS, FIELDS, FIRST_NAMES,
+                    LANGS, LAST_NAMES, LEVELS, MONTHS, SCHOOLS, SKILL_LABELS, SOFT_SKILLS,
                     TECH, TITLES, UNIVERSITIES, ResumeTextSampler, smart_quotes)
 
 

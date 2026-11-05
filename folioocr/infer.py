@@ -16,14 +16,13 @@ import math
 import os
 import re
 import sys
-from dataclasses import asdict
-from typing import Dict, List, Optional
+from typing import List, Optional
 
 from PIL import Image
 
 from .imaging import fit_image
 from .schema import Block, denormalize_bbox, to_markdown
-from .textnorm import extract_fields, field_set, markdown_to_text, normalize_field
+from .textnorm import field_set, markdown_to_text
 
 _TABLE = re.compile(r"<table.*?</table>", re.S | re.I)
 

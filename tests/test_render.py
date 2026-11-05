@@ -3,9 +3,6 @@
 Needs Chromium (``python -m playwright install chromium``) and ./assets
 (``python fetch_assets.py``); skipped otherwise.
 """
-import json
-import random
-
 import numpy as np
 import pytest
 

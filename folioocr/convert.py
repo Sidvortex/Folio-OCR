@@ -7,7 +7,7 @@ with page headers/footers removed, tables as HTML and math in ``$``/``$$``.
 from __future__ import annotations
 
 import re
-from typing import Iterable, Optional
+from typing import Iterable
 
 from bs4 import BeautifulSoup, NavigableString, Tag
 

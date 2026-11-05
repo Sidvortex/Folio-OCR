@@ -1,5 +1,4 @@
 """Scoring must agree with olmOCR-Bench and separate good from bad output."""
-import json
 import os
 import random
 
@@ -8,7 +7,7 @@ import pytest
 olmocr = pytest.importorskip("olmocr.bench.tests")
 
 from folioocr.bench.stats import category_mean, paired_bootstrap, paired_bootstrap_pages  # noqa: E402
-from folioocr.bench.unittests import run_page, score, summarize  # noqa: E402
+from folioocr.bench.unittests import run_page, summarize  # noqa: E402
 
 PAGE_MD = ("# Ravada Siddharth\n\nravada.s@gmail.com | +91 98765 43210\n\n## Experience\n\n"
            "**Software Engineer**, Acme Corp (Jan 2021 – Present)\n\n- Built REST APIs with FastAPI\n- Cut latency by 30%\n\n"
