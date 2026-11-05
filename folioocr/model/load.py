@@ -66,21 +66,31 @@ def load_model(cfg: ModelConfig, for_training: bool = False) -> Tuple[object, ob
     processor = load_processor(cfg.model)
     if cfg.adapter:
         from peft import PeftModel
+        if for_training:                 # continue training an adapter: same memory set-up as add_lora
+            model = prepare_for_training(model, cfg.load_4bit)
         model = PeftModel.from_pretrained(model, cfg.adapter, is_trainable=for_training)
     if not for_training:
         model.eval()
     return model, processor
 
 
-def add_lora(model, r: int = 64, alpha: int = 128, dropout: float = 0.05, target_regex: str = LORA_TARGET_REGEX,
-             quantized: bool = False, gradient_checkpointing: bool = True):
-    from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
+def prepare_for_training(model, quantized: bool, gradient_checkpointing: bool = True):
+    """4-bit: peft's k-bit preparation; otherwise activation checkpointing. Either way the
+    inputs require grad, so checkpointed blocks still backpropagate into LoRA weights."""
     if quantized:
-        model = prepare_model_for_kbit_training(model, use_gradient_checkpointing=gradient_checkpointing,
-                                                gradient_checkpointing_kwargs={"use_reentrant": False})
-    elif gradient_checkpointing:
+        from peft import prepare_model_for_kbit_training
+        return prepare_model_for_kbit_training(model, use_gradient_checkpointing=gradient_checkpointing,
+                                               gradient_checkpointing_kwargs={"use_reentrant": False})
+    if gradient_checkpointing:
         model.gradient_checkpointing_enable(gradient_checkpointing_kwargs={"use_reentrant": False})
         model.enable_input_require_grads()
+    return model
+
+
+def add_lora(model, r: int = 64, alpha: int = 128, dropout: float = 0.05, target_regex: str = LORA_TARGET_REGEX,
+             quantized: bool = False, gradient_checkpointing: bool = True):
+    from peft import LoraConfig, get_peft_model
+    model = prepare_for_training(model, quantized, gradient_checkpointing)
     cfg = LoraConfig(r=r, lora_alpha=alpha, lora_dropout=dropout, target_modules=target_regex, bias="none",
                      task_type="CAUSAL_LM")
     return get_peft_model(model, cfg)
