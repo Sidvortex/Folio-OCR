@@ -29,7 +29,7 @@ from typing import Dict, List, Optional, Tuple
 
 from .engines import PageItem, safe_key
 from .stats import bootstrap_ci
-from .unittests import summarize
+from .unittests import clean_test, summarize
 
 
 def load_bench_tests(bench: str) -> Tuple[List[dict], Dict[str, str]]:
@@ -42,6 +42,8 @@ def load_bench_tests(bench: str) -> Tuple[List[dict], Dict[str, str]]:
                 line = line.strip()
                 if line:
                     t = json.loads(line)
+                    if t.get("checked") == "rejected":       # a reviewer threw this test out (holdout review)
+                        continue
                     t["_category"] = cat
                     tests.append(t)
                     pdf_cat.setdefault(t["pdf"], cat)
@@ -128,7 +130,7 @@ def score_candidate(bench: str, name: str, tests: List[dict], categories: Option
         if only_pdfs is not None and t["pdf"] not in only_pdfs:
             continue
         pdfs_seen.add(t["pdf"])
-        obj = load_single_test({k: v for k, v in t.items() if not k.startswith("_")})
+        obj = load_single_test(clean_test(t))
         texts = mds(t["pdf"], int(t.get("page", 1)))
         if not texts:
             passed, why = False, "missing output"
@@ -203,7 +205,8 @@ def run(args, engine) -> Dict:
     meta = {"name": args.name, "engine": args.engine, "render": args.render, "longest_side": args.longest_side,
             "dpi": args.dpi, "model": getattr(args, "model", None), "adapter": getattr(args, "adapter", None),
             "max_pixels": getattr(args, "max_pixels", None), "timing": timing, "categories": cats,
-            "limit": args.limit, "shard": args.shard}
+            "limit": args.limit, "shard": args.shard, "sample": getattr(args, "sample", None),
+            "seed": getattr(args, "seed", None), "pages_scored": len(only) if only is not None else None}
     out.write_text(json.dumps({"meta": meta, **summary}, indent=1))
     print(format_bench(summary, args.name))
     print(f"per-test results -> {out}")
