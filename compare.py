@@ -6,8 +6,9 @@
 
 Prints both scores, the difference, its 95% interval and whether it excludes
 zero (the plan's rule for claiming a win). Works on olmOCR-Bench, Resume-Bench
-and dev-set result files (anything with per-test ``results``). Resume-Bench
-files also get page CER and field accuracy compared (gate G1 needs both).
+and dev-set result files: unit tests where there are per-test ``results``, and
+page CER and field accuracy where there are per-page rows (Resume-Bench and
+dev sets; gate G1 needs both).
 """
 import argparse
 import json
@@ -33,10 +34,20 @@ def main() -> None:
     rb = db.get("results") if isinstance(db, dict) else db
     if ra and rb:
         out["tests"] = paired_bootstrap(ra, rb, iters=args.iters)
-    if isinstance(da, dict) and isinstance(db, dict) and da.get("pages") and db.get("pages"):
+
+    def page_rows(d):
+        if not isinstance(d, dict):
+            return None
+        rows = d.get("page_rows") or d.get("pages")          # dev results / Resume-Bench results
+        return rows if isinstance(rows, list) and rows else None
+
+    pa, pb = page_rows(da), page_rows(db)
+    if pa and pb:
         for metric in ("line_cer", "fields"):
+            if metric == "fields" and not any(r.get("fields", [0, 0])[1] for r in pa):
+                continue
             try:
-                out[metric] = paired_bootstrap_pages(da["pages"], db["pages"], metric, iters=args.iters)
+                out[metric] = paired_bootstrap_pages(pa, pb, metric, iters=args.iters)
             except (ValueError, KeyError) as e:
                 out[metric] = {"error": str(e)}
     if args.json:
