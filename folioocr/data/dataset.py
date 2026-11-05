@@ -11,7 +11,9 @@ the ``doc2md`` task. Image paths are relative to the label file.
 Each example is the user turn (image + task prompt, rendered with the model's
 own chat template exactly as at inference) followed by the target and
 ``<|im_end|>``; only the target tokens are supervised. A target that does not
-fit ``max_length`` loses blocks from the end (whole blocks, never half a JSON).
+fit ``max_length`` loses blocks from the end (whole blocks, never half a JSON);
+the shortened JSON's closing and the end-of-turn token then get no loss, so the
+model never learns to stop before the page ends.
 """
 from __future__ import annotations
 
@@ -47,7 +49,9 @@ def parse_sources(specs: Sequence[str], split: Optional[str] = "train") -> List[
     """``path.jsonl[:weight]`` -> [(records, weight)]."""
     out = []
     for spec in specs:
-        path, _, w = spec.partition(":") if not os.path.exists(spec) else (spec, "", "")
+        path, _, w = spec.rpartition(":") if not os.path.exists(spec) else (spec, "", "")
+        if not path:
+            path, w = spec, ""
         recs = read_labels(path, split)
         if not recs:
             raise ValueError(f"no records with split={split!r} in {path}")
@@ -114,19 +118,34 @@ class PageDataset:
                 break
             mp = max(self.min_pixels, mp // 2)
         n = len(rec.get("blocks", [])) or None
-        tgt = self.tok(self.target(rec, task, n), add_special_tokens=False)["input_ids"]
+        text = self.target(rec, task, n)
+        tgt = self.tok(text, add_special_tokens=False)["input_ids"]
         while len(tgt) > budget and n and n > 1:          # drop whole blocks from the end
             n = max(1, int(n * budget / max(1, len(tgt))) if len(tgt) > 1.5 * budget else n - 1)
-            tgt = self.tok(self.target(rec, task, n), add_special_tokens=False)["input_ids"]
+            text = self.target(rec, task, n)
+            tgt = self.tok(text, add_special_tokens=False)["input_ids"]
         supervise = True
+        cut = False                                        # the target stops before the page does
         if len(tgt) > budget:
             if "blocks" in rec:                            # even one block does not fit: learn nothing from it
                 supervise = False
             tgt = tgt[:max(0, budget)]                     # markdown-only record: plain cut
+            cut = True
         if n is not None and n < len(rec.get("blocks", [])):
             self.dropped_blocks += len(rec["blocks"]) - n
+            cut = True
         ids = prompt_ids + tgt + [self.im_end]
-        labels = [-100] * len(prompt_ids) + (tgt + [self.im_end] if supervise else [-100] * (len(tgt) + 1))
+        tail = tgt + [self.im_end]
+        if cut:
+            # never teach "stop here" on a page that goes on: the closing of a shortened JSON
+            # and the end-of-turn token get no loss
+            keep = len(tgt)
+            if task == "doc2json" and "blocks" in rec and len(tgt) <= budget:
+                close = text.rfind("\n]")
+                if close > 0:
+                    keep = max(0, len(self.tok(text[:close], add_special_tokens=False)["input_ids"]) - 1)
+            tail = tgt[:keep] + [-100] * (len(tgt) - keep) + [-100]
+        labels = [-100] * len(prompt_ids) + (tail if supervise else [-100] * (len(tgt) + 1))
         out = {"input_ids": ids, "labels": labels, "pixel_values": enc["pixel_values"],
                "image_grid_thw": enc["image_grid_thw"], "id": rec.get("id", ""), "task": task}
         if "mm_token_type_ids" in enc:
