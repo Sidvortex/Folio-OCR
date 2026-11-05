@@ -129,6 +129,249 @@ python compare.py results/olmocr/resume_v1_s300.json results/olmocr/flash_s300.j
 - **`fields_by_kind`** in the result files (email, phone, URL, date) shows which kind of field is failing.
 - **`--crosscheck`** shows whether ResumeOCR-Lite's line reader disagrees on those fields. Example: `infer.py page.jpg --adapter ... --crosscheck ../ResumeOCR-Lite`.
 
-## G2, G3, G4
+## G2: general SFT (end of Phase 2)
 
-These gates come with the Phase 2–4 code (data engine, RL, merge and release), and this page will get their commands then.
+**Plan:**
+
+- The SFT model matches or beats Flash's reproduced olmOCR-Bench score.
+- It beats Flash on the old-scans and multi-column dev sets.
+
+**Free version:**
+
+- olmOCR-Bench on the G0 sample. "Matches" means not significantly worse: the paired interval's upper end is above zero.
+- The two dev sets must be beaten significantly.
+- Training is a LoRA continuation of the Phase 1 adapter on about 10–20k samples, not the plan's 1–1.5M-page full fine-tune.
+
+**1. Data.** Each `olmOCR-mix` tarball holds a few thousand single-page PDFs (about 1 GB). Kaggle's working disk is 20 GB, so take one or two per subset.
+
+```bash
+hf download allenai/olmOCR-mix-1025 --repo-type dataset --local-dir olmocr-mix --include \
+    "00_documents_train.parquet" "pdf_tarballs/00_documents_train_00000.tar.gz" \
+    "02_loc_transcripts_train.parquet" "pdf_tarballs/02_loc_transcripts_train_00000.tar.gz" \
+    "03_national_archives_train.parquet" "pdf_tarballs/03_national_archives_train_00000.tar.gz" \
+    "02_loc_transcripts_eval.parquet" "pdf_tarballs/02_loc_transcripts_eval_*"
+hf download allenai/olmOCR-synthmix-1025 --repo-type dataset --local-dir synthmix
+
+python prepare_data.py olmocr-mix --parquet olmocr-mix/00_documents_train.parquet \
+    --tarballs olmocr-mix/pdf_tarballs/00_documents_train_00000.tar.gz --out data/olmocr_docs --limit 3000
+python prepare_data.py olmocr-mix --parquet olmocr-mix/02_loc_transcripts_train.parquet \
+    --tarballs olmocr-mix/pdf_tarballs/02_loc_transcripts_train_00000.tar.gz --out data/olmocr_hist --limit 1500
+python prepare_data.py olmocr-mix --parquet olmocr-mix/03_national_archives_train.parquet \
+    --tarballs olmocr-mix/pdf_tarballs/03_national_archives_train_00000.tar.gz --out data/olmocr_hist --limit 1500
+python prepare_data.py synthmix --root synthmix --out-sft data/synthmix --out-rl data/rl_synthmix
+python prepare_data.py preview --labels data/olmocr_hist/labels.jsonl --n 8      # look before training
+
+# our renders (CPU: run these on your own computer and upload data/)
+python -m folioocr.render.make_dataset --out data/render_old --n 4000 --workers 6 --prefix o --start-seed 2000000 \
+    --mix "article=0.4,letter=0.25,table=0.2,math=0.15" --conditions "old=0.5,scan=0.4,photo=0.1"
+python -m folioocr.render.make_dataset --out data/render_layout --n 4000 --workers 6 --prefix l --start-seed 3000000 \
+    --mix "article=0.5,table=0.3,math=0.2" --conditions "clean=0.4,scan=0.4,photo=0.2"
+```
+
+**2. Dev sets for the gate.** Every page in them is held out (`--dev-frac 1`).
+
+```bash
+python -m folioocr.render.make_dataset --out data/dev_old --n 300 --workers 6 --prefix do --start-seed 9000000 \
+    --mix "article=0.5,letter=0.25,table=0.25" --conditions old=1 --dev-frac 1
+python -m folioocr.render.make_dataset --out data/dev_multicol --n 300 --workers 6 --prefix dm --start-seed 9500000 \
+    --mix article=1 --dev-frac 1
+python prepare_data.py olmocr-mix --parquet olmocr-mix/02_loc_transcripts_eval.parquet \
+    --tarballs olmocr-mix/pdf_tarballs/02_loc_transcripts_eval_* --out data/dev_loc --dev-frac 1
+```
+
+**3. Contamination, then the data card.**
+
+- Index every evaluation set once.
+- Check every training source, and train only on the `labels.clean.jsonl` files.
+- The mixture presets in `mixtures/` already point at the clean files.
+
+```bash
+python dedup.py index --out eval_index.npz --olmocr olmOCR-bench/bench_data --resume resume_bench \
+    --labels dev_old=data/dev_old/labels.jsonl dev_multicol=data/dev_multicol/labels.jsonl dev_loc=data/dev_loc/labels.jsonl
+python dedup.py check --index eval_index.npz --report results/contamination.json --write-clean --labels \
+    data/olmocr_docs/labels.jsonl data/olmocr_hist/labels.jsonl data/synthmix/labels.jsonl \
+    data/render_old/labels.jsonl data/render_layout/labels.jsonl
+python make_data_card.py --mixture mixtures/general-free-v1.json --contamination results/contamination.json \
+    --out docs/DATA_CARD.md
+```
+
+**4. Train.**
+
+- This continues from the Phase 1 adapter, with resumes still 15% of the mix so the resume skill stays.
+- `--samples-per-epoch` sets the run's length. Measure with `--max-steps 20` first.
+- `train_sft.py` refuses a mixture with a non-commercial source (Infinity-Doc2-5M is CC BY-NC-SA) unless you pass `--allow-noncommercial`.
+
+```bash
+accelerate launch --num_processes 2 --mixed_precision fp16 train_sft.py --profile t4 \
+    --mixture mixtures/general-free-v1.json --init-adapter runs/resume-t4/best \
+    --dev data/dev_old/labels.jsonl --dev-tests data/dev_old/tests.jsonl \
+    --out runs/general-t4 --samples-per-epoch 12000 --resume
+```
+
+**The control (optional on free GPUs).** Train the same recipe from `Qwen/Qwen3.5-2B` (add `--model Qwen/Qwen3.5-2B`, and drop `--init-adapter`). This shows how much of the gain comes from our data rather than Flash's.
+
+**Formulas:** before training on math pages, check one raw Flash output on a page with a display formula (`infer.py page.png --raw`).
+
+- Our labels write formula blocks as `$$...$$`.
+- If Flash writes them bare, decide which convention to keep before training, because olmOCR's math tests read `$$` blocks.
+
+**5. Decide G2.**
+
+```bash
+for d in dev_old dev_multicol dev_loc; do
+  python bench_dev.py --labels data/$d/labels.jsonl --tests data/$d/tests.jsonl --name flash_$d --limit 120 --batch-size 4
+  python bench_dev.py --labels data/$d/labels.jsonl --tests data/$d/tests.jsonl --name general_$d --limit 120 \
+      --batch-size 4 --adapter runs/general-t4/best
+  python compare.py results/dev/general_$d.json results/dev/flash_$d.json
+done
+# multi-column only: add --where columns=2 to both bench_dev runs
+python bench_olmocr.py --bench olmOCR-bench/bench_data --name general_s300 --sample 300 \
+    --adapter runs/general-t4/best --batch-size 4 --max-new-tokens 6000
+python compare.py results/olmocr/general_s300.json results/olmocr/flash_s300.json
+```
+
+- `dev_loc` has no unit tests, so `compare.py` compares it on page CER only.
+- For the rendered dev sets, it compares unit tests and CER.
+
+**If G2 fails:** stop the general climb, and ship Tier A with its efficiency results.
+
+## G3: RL (end of Phase 3)
+
+**Plan:**
+
+- **Tier B:** significantly above Chandra 2 and Surya OCR 2 on olmOCR-Bench.
+- **Tier C:** at or above Pro on olmOCR-Bench (87.6) and OmniDocBench v1.6 (93.95).
+- OmniDocBench never falls below Flash.
+
+**Free version:**
+
+- **Tier B:** decided on the G0 sample, with paired comparisons against our own Chandra 2 and Surya OCR 2 runs.
+- **Tier C:** can't be tested against Pro itself, because it needs an 80 GB GPU. Report our interval next to Pro's published score, and claim nothing unless the interval's lower end clears it.
+- **OmniDocBench:** use the same page subset for Flash and for ours.
+
+**1. RL items:** bands of rendered pages, each with its own tests.
+
+- On a T4, keep to bands.
+- The full arXiv pages in `data/rl_synthmix` need several thousand output tokens per sample. Use them only with the `a100` profile.
+
+```bash
+python make_rl_set.py --labels data/resumes/labels.jsonl data/render_old/labels.jsonl data/render_layout/labels.jsonl \
+    --out data/rl_regions --per-page 2 --max-chars 1200
+```
+
+**2. Pilot, read, then run.**
+
+- The pilot is 50 steps. Read `runs/rl-pilot/samples/*.jsonl` before the real run, looking for reward hacking (for example, dropping text to pass absence tests).
+- Each GPU samples its own items, and gradients are averaged.
+- Check `train_log.jsonl`:
+  - **`skipped_groups`:** if most groups are skipped (every sample got the same reward), raise `--group` or `--temperature`.
+  - **`loops`:** should stay near zero.
+
+```bash
+torchrun --nproc_per_node 2 train_rl.py --profile t4 --adapter runs/general-t4/best \
+    --data data/rl_regions/labels.jsonl --out runs/rl-pilot --steps 50 --eval-every 25 --dump-every 25
+torchrun --nproc_per_node 2 train_rl.py --profile t4 --adapter runs/general-t4/best \
+    --data data/rl_regions/labels.jsonl --out runs/rl-t4 --steps 400 --resume
+```
+
+- **Saving:** `runs/rl-t4/best` holds the adapter with the best dev reward.
+- **Plateau stop:** the run stops by itself after `--patience` flat evaluations.
+- **Plan's settings:** 8 samples per page, little or no KL. On the T4 profile that is `--group 8 --beta 0`, at twice the cost of the default `--group 4`.
+
+**3. Decide G3.**
+
+```bash
+python bench_olmocr.py --bench olmOCR-bench/bench_data --name rl_s300 --sample 300 \
+    --adapter runs/rl-t4/best --batch-size 4 --max-new-tokens 6000
+python compare.py results/olmocr/rl_s300.json results/olmocr/chandra2_s300.json     # Tier B
+python compare.py results/olmocr/rl_s300.json results/olmocr/surya2_s300.json       # Tier B
+python compare.py results/olmocr/rl_s300.json results/olmocr/flash_s300.json
+python bench_resume.py run --bench resume_bench --name rl_v1 --adapter runs/rl-t4/best   # Tier A must still hold
+
+# OmniDocBench: predictions for the same page subset, scored with its official code
+python bench_omnidoc.py --images OmniDocBench/images --name flash_od --limit 300
+python bench_omnidoc.py --images OmniDocBench/images --name rl_od --limit 300 --adapter runs/rl-t4/best
+```
+
+**If G3 fails:** claim only what passed. Run one more RL round only while the dev reward is still rising.
+
+## G4: release (end of Phase 4)
+
+**Plan:**
+
+- The private holdout moves the same way as the public scores.
+- The contamination and licence checks are clean.
+
+**1. Merge, optionally average, quantise.**
+
+- **Merging:** happens on the CPU and needs about 5 GB of RAM.
+- **Averaging:** keep the average only if it beats the plain merge on the dev sets.
+- **Quantising:** needs a CUDA GPU. Re-run every benchmark on the quantised copy, because its numbers are the consumer-GPU numbers.
+
+```bash
+python merge_lora.py --adapter runs/rl-t4/best --out models/folio-v1
+python merge_lora.py --adapter runs/general-t4/best runs/rl-t4/best --weights 0.5 0.5 --out models/folio-avg
+python bench_dev.py --labels data/dev_old/labels.jsonl --tests data/dev_old/tests.jsonl --name v1_dev --model models/folio-v1
+python bench_dev.py --labels data/dev_old/labels.jsonl --tests data/dev_old/tests.jsonl --name avg_dev --model models/folio-avg
+python compare.py results/dev/avg_dev.json results/dev/v1_dev.json
+
+python merge_lora.py quantize --model models/folio-v1 --out models/folio-v1-nf4 --bits 4
+python bench_olmocr.py --bench olmOCR-bench/bench_data --name v1_nf4_s300 --sample 300 --model models/folio-v1-nf4
+python speed_test.py --images bench_cache/long1288 --pages 20 --name v1_t4 --model models/folio-v1 --batch-size 4
+python speed_test.py --images bench_cache/long1288 --pages 20 --name v1_nf4_t4 --model models/folio-v1-nf4 --batch-size 4
+```
+
+**2. The holdout:**
+
+- About 300 fresh pages, collected after the training data was frozen, sorted into `holdout_src/<category>/` by olmOCR-Bench category.
+- Draft tests from a strong teacher, then check every test against the page image.
+- Every test must be marked `verified` or `rejected`; `--status` says when the set is ready.
+
+```bash
+python draft_holdout_tests.py --src holdout_src --out holdout --engine openai --api-base http://localhost:8000/v1 \
+    --api-model infly/Infinity-Parser2-Pro --api-prompt doc2json        # or --engine folio (Flash) on a free GPU
+python draft_holdout_tests.py --out holdout --status
+python bench_olmocr.py --bench holdout/bench_data --name v1_holdout --model models/folio-v1
+python bench_olmocr.py --bench holdout/bench_data --name flash_holdout
+python compare.py results/olmocr/v1_holdout.json results/olmocr/flash_holdout.json
+```
+
+**Pass:**
+
+- The holdout difference (ours − Flash) has the same sign as on olmOCR-Bench, and its interval overlaps the public one.
+- `dedup.py check` finds no matches in the clean files you trained on.
+- The data card lists no source with an unknown licence.
+- Non-commercial sources are named on the model card.
+
+**3. The model card.** Every number on it comes from a result file.
+
+```bash
+python make_model_card.py --name folio-ocr-v1 --model-dir models/folio-v1 --sft-run runs/general-t4 --rl-run runs/rl-t4 \
+    --olmocr results/olmocr/rl_s300.json --olmocr-baseline results/olmocr/flash_s300.json \
+        results/olmocr/chandra2_s300.json results/olmocr/surya2_s300.json \
+    --resume results/resume/rl_v1.json --resume-baseline results/resume/flash.json results/resume/chandra2.json \
+    --holdout results/olmocr/v1_holdout.json --holdout-baseline results/olmocr/flash_holdout.json \
+    --speed results/speed/v1_t4.json results/speed/v1_nf4_t4.json --contamination results/contamination.json
+```
+
+**If G4 fails:** make no public claim until it passes.
+
+## Teacher labels for your own pages (any phase)
+
+Real pages without a source become training data only when two permissively licensed teachers agree:
+
+- Infinity-Parser2-Pro and olmOCR 2 are both Apache-2.0.
+- Chandra and Surya are never used as teachers.
+
+On free GPUs, Flash itself can be one of the two teachers (`--engine folio`). The other can be any endpoint whose terms allow training on its output.
+
+```bash
+python label_teachers.py stage --inputs my_scans/ --stage teach/pages
+python label_teachers.py run --stage teach/pages --name flash --licence Apache-2.0 --cache teach/flash --engine folio
+python label_teachers.py run --stage teach/pages --name olmocr2 --licence Apache-2.0 --cache teach/olmocr2 \
+    --engine openai --api-base http://localhost:8001/v1 --api-model allenai/olmOCR-2-7B-1025 --api-prompt olmocr
+python label_teachers.py merge --stage teach/pages --a teach/flash --b teach/olmocr2 --out data/consensus
+```
+
+- Pages where the teachers disagree go to `data/consensus/review.jsonl`.
+- Run `dedup.py check` on `data/consensus/labels.jsonl` like any other source.
