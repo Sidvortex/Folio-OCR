@@ -4,9 +4,6 @@ The overfit test is the important one: if the prompt/target layout, label
 masking, chunked loss, LoRA wiring, generation stop tokens or output parsing
 were wrong, a model could not learn to reproduce one page's labels exactly.
 """
-import json
-import os
-
 import pytest
 
 torch = pytest.importorskip("torch")
@@ -65,8 +62,14 @@ def test_long_targets_lose_whole_blocks(tiny_model, page_record):
     one = len(proc.tokenizer(dump_target([Block.from_dict(BLOCKS[0])]), add_special_tokens=False)["input_ids"])
     ds = PageDataset([([page_record], 1.0)], proc, {"doc2json": 1.0}, max_pixels=40_000, max_length=n_prompt + one + 3)
     ex = ds[0]
+    short = dump_target([Block.from_dict(BLOCKS[0])])
+    n_tail = len(proc.tokenizer(short, add_special_tokens=False)["input_ids"]) + 1
+    seen = proc.tokenizer.decode(ex["input_ids"][-n_tail:])
+    assert seen == short + "<|im_end|>"                       # the input is still valid JSON, one block dropped
     sup = proc.tokenizer.decode([t for t, l in zip(ex["input_ids"], ex["labels"]) if l != -100])
-    assert sup == dump_target([Block.from_dict(BLOCKS[0])]) + "<|im_end|>"   # still valid JSON, one block dropped
+    # ...but its closing and the end-of-turn get no loss: the page did not end there
+    assert short.startswith(sup) and len(sup) >= short.rfind("\n]") - 2 and "<|im_end|>" not in sup
+    assert ex["labels"][-1] == -100
     assert ds.dropped_blocks == 1
 
 
