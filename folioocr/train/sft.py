@@ -29,11 +29,14 @@ def build_args(argv=None):
     ap.add_argument("--profile", default="t4", choices=sorted(PROFILES))
     ap.add_argument("--model", default=None, help="base model id or path (default: Infinity-Parser2-Flash)")
     ap.add_argument("--init-adapter", default=None, help="start from an existing LoRA adapter")
-    ap.add_argument("--data", nargs="+", required=True, help="label files, optionally path:weight")
+    ap.add_argument("--data", nargs="+", default=None, help="label files, optionally path:weight")
+    ap.add_argument("--mixture", default=None, help="mixtures/*.json: label files, shares and task mix")
+    ap.add_argument("--allow-noncommercial", action="store_true",
+                    help="train on a source whose licence forbids commercial use (e.g. Infinity-Doc2-5M)")
     ap.add_argument("--dev", default=None, help="label file for dev evaluation (split=dev pages are used)")
     ap.add_argument("--dev-tests", default=None, help="tests.jsonl for the dev pages")
     ap.add_argument("--out", required=True)
-    ap.add_argument("--task-mix", default="doc2json=0.8,doc2md=0.2")
+    ap.add_argument("--task-mix", default=None, help="default doc2json=0.8,doc2md=0.2 (or the mixture's)")
     ap.add_argument("--epochs", type=float, default=1.0)
     ap.add_argument("--max-steps", type=int, default=-1)
     ap.add_argument("--samples-per-epoch", type=int, default=None, help="epoch size for weighted mixtures")
@@ -51,6 +54,22 @@ def build_args(argv=None):
                    ("max_new_tokens", int)):
         ap.add_argument(f"--{k.replace('_', '-')}", dest=k, type=typ, default=None)
     args = ap.parse_args(argv)
+    if not args.data and not args.mixture:
+        ap.error("--data or --mixture is required")
+    if args.mixture:
+        from ..data.mixture import load_mixture
+        mix = load_mixture(args.mixture)
+        args.data = (args.data or []) + mix.specs()
+        args.task_mix = args.task_mix or mix.task_mix
+    args.task_mix = args.task_mix or "doc2json=0.8,doc2md=0.2"
+    from ..data.mixture import licences
+    lic = licences(args.data)
+    if lic["noncommercial"] and not args.allow_noncommercial:
+        ap.error("non-commercial source(s) in the training data: " + ", ".join(lic["noncommercial"])
+                 + "; pass --allow-noncommercial to train anyway (the model is then non-commercial too)")
+    for u in lic["unknown"]:
+        print(f"warning: {u} has no source.json (licence unknown)", file=sys.stderr)
+    args.licences = lic
     prof = PROFILES[args.profile]
     for k, v in prof.items():
         if getattr(args, k, None) is None:
