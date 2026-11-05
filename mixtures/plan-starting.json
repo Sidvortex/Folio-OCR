@@ -1,0 +1,13 @@
+{
+ "name": "plan-starting",
+ "description": "The plan's starting mixture for general SFT (rented GPUs). Includes Infinity-Doc2-5M: CC BY-NC-SA, so training needs --allow-noncommercial and the model is non-commercial.",
+ "task_mix": "doc2json=0.7,doc2md=0.3",
+ "sources": [
+  {"labels": "data/infdoc2/labels.clean.jsonl", "weight": 0.40, "role": "Infinity-Doc2-5M sample"},
+  {"labels": "data/olmocr_docs/labels.clean.jsonl", "weight": 0.20, "role": "olmOCR-mix real pages"},
+  {"labels": "data/render_old/labels.clean.jsonl", "weight": 0.15, "role": "our degraded renders"},
+  {"labels": "data/lighton/labels.clean.jsonl", "weight": 0.10, "role": "LightOnOCR-mix scans"},
+  {"labels": "data/render_layout/labels.clean.jsonl", "weight": 0.10, "role": "our tables, math and multi-column renders"},
+  {"labels": "data/resumes/labels.jsonl", "weight": 0.05, "role": "resumes"}
+ ]
+}
