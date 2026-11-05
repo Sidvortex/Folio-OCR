@@ -90,9 +90,10 @@ def pdf_page_count(path: str) -> int:
         pdf.close()
 
 
-def render_pdf(path: str, dpi: Optional[float] = 300, longest_side: Optional[int] = None,
+def render_pdf(path, dpi: Optional[float] = 300, longest_side: Optional[int] = None,
                pages: Optional[Sequence[int]] = None) -> List[Image.Image]:
-    """Render PDF pages (1-based ``pages``; all by default).
+    """Render PDF pages (1-based ``pages``; all by default). ``path`` may also
+    be the PDF's bytes (e.g. a member read from a tarball).
 
     ``longest_side`` (e.g. 1288, olmOCR-Bench's common setting) overrides
     ``dpi`` and scales each page so its longer side has that many pixels."""
