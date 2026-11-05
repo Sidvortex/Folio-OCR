@@ -129,6 +129,7 @@ def build_page(seed: int, cfg: Dict, renderer) -> Optional[Tuple[dict, List[dict
     pid = f"{cfg['prefix']}{seed:07d}"
     tests = make_tests(pid, blocks, lines_out, rng, fields=(kind == "resume"))
     rec = {"id": pid, "image": f"images/{pid}.jpg", "width": W, "height": H, "kind": kind, "layout": layout,
+           "columns": 2 if layout.startswith("resume/") and not layout.endswith("classic") else getattr(doc, "columns", 1),
            "condition": cond, "dpi": round(dpi, 1), "blocks": [b.to_dict() for b in blocks], "lines": lines_out,
            "split": "dev" if (seed * 2654435761 % 1000) < cfg["dev_frac"] * 1000 else "train",
            "meta": {"removed": rend.removed, "degrade": log, "render_s": round(rend.seconds, 2)}}
@@ -163,7 +164,7 @@ def draw_preview(rec: dict, root: str, dst: str, max_side: int = 1100) -> None:
         col = COLORS.get(b["category"], (200, 0, 200))
         d.rectangle([x1 * img.width, y1 * img.height, x2 * img.width, y2 * img.height], outline=col, width=2)
         d.text((x1 * img.width + 2, y1 * img.height - 10), f"{i}:{b['category']}", fill=col)
-    for l in rec["lines"]:
+    for l in rec.get("lines", []):
         x1, y1, x2, y2 = [v * s for v in l["box"]]
         d.rectangle([x1, y1, x2, y2], outline=(0, 200, 200), width=1)
     img.save(dst)
@@ -219,6 +220,12 @@ def main(argv=None) -> None:
     meta = {"n_attempted": len(seeds), "n_kept": n_ok, "skipped": reasons, "seconds": round(time.time() - t0, 1),
             **{k: v for k, v in cfg.items() if k not in ("out",)}, "args": vars(args)}
     (out / "meta.json").write_text(json.dumps(meta, indent=2, default=str))
+    from ..data.sources.common import LICENCES
+    with open(out / "labels.jsonl", encoding="utf-8") as f:
+        n_total = sum(1 for line in f if line.strip())
+    (out / "source.json").write_text(json.dumps({"source": "folio-render", **LICENCES["folio-render"],
+                                                 "records": n_total, "mix": cfg["mix"],
+                                                 "conditions": cfg["conditions"]}, indent=1))
     print(f"kept {n_ok}/{len(seeds)} pages in {time.time() - t0:.0f}s -> {out}  (skipped: {reasons})")
     if args.preview:
         (out / "preview").mkdir(exist_ok=True)
