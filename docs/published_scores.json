@@ -1,0 +1,14 @@
+{
+ "benchmark": "olmOCR-Bench (overall)",
+ "note": "As published by each team, not run by us. Read on 27 October 2026; recheck before quoting.",
+ "models": [
+  {"name": "Infinity-Parser2-Pro", "size": "35B MoE", "score": 87.6},
+  {"name": "Infinity-Parser2-Flash", "size": "2B", "score": 86.0},
+  {"name": "Chandra 2", "size": "5B", "score": 85.8},
+  {"name": "dots.mocr", "size": "3B", "score": 83.9},
+  {"name": "Surya OCR 2", "size": "0.65B", "score": 83.3},
+  {"name": "LightOnOCR-2-1B", "size": "1B", "score": 83.2},
+  {"name": "olmOCR 2", "size": "7B", "score": 82.4},
+  {"name": "PaddleOCR-VL-1.5", "size": "0.9B", "score": 78.5, "source": "Infinity-Parser2 model card"}
+ ]
+}

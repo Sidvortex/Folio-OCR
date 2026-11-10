@@ -16,6 +16,12 @@ On free GPUs the realistic target is **Tier A**: the best resume reader of every
 
 `docs/PHASES.md` maps every gate of the plan (G0–G4) to the commands that decide it.
 
+## Where the field stands
+
+![olmOCR-Bench published scores](docs/charts/olmocr_published.svg)
+
+Published by each team, read on 27 October 2026. Folio-OCR's own bar appears here after the gate runs in `docs/PHASES.md`.
+
 ## What was checked, and what was not
 
 Checked here, on CPU:
