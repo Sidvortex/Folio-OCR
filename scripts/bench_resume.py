@@ -2,12 +2,12 @@
 """Resume-Bench: build it once from ResumeOCR-Lite ground truth, then score engines.
 
     # 1) freeze the benchmark (tests never change after this)
-    python bench_resume.py build --gt ../ResumeOCR-Lite/data/realtest/gt.jsonl --out resume_bench
+    python scripts/bench_resume.py build --gt ../ResumeOCR-Lite/data/realtest/gt.jsonl --out resume_bench
 
     # 2) run engines on it
-    python bench_resume.py run --bench resume_bench --name flash --engine folio --model infly/Infinity-Parser2-Flash
-    python bench_resume.py run --bench resume_bench --name folio_v1 --engine folio --adapter runs/resume-t4/best
-    python bench_resume.py run --bench resume_bench --name chandra2 --engine chandra
+    python scripts/bench_resume.py run --bench resume_bench --name flash --engine folio --model infly/Infinity-Parser2-Flash
+    python scripts/bench_resume.py run --bench resume_bench --name folio_v1 --engine folio --adapter runs/resume-t4/best
+    python scripts/bench_resume.py run --bench resume_bench --name chandra2 --engine chandra
 
 Synthetic pages (make_dataset output) work too: ``build --synthetic data/synth/labels.jsonl``
 turns their line labels into the same format (useful before real resumes exist).
@@ -17,7 +17,7 @@ import json
 import os
 import sys
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from folioocr.bench import resume_bench as rb  # noqa: E402
 from folioocr.bench.engines import PageItem, add_engine_args, make_engine, safe_key  # noqa: E402

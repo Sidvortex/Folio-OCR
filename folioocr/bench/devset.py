@@ -57,7 +57,7 @@ def evaluate_records(parser, records: List[dict], tests_by_page: Optional[Dict[s
             fields[k][0] += f
             fields[k][1] += t
             f_ok, f_tot = f_ok + f, f_tot + t
-        # per-page rows: compare.py bootstraps CER and fields over pages with them
+        # per-page rows: scripts/compare.py bootstraps CER and fields over pages with them
         rows.append({"id": r["id"], "tier": r.get("condition") or r.get("source") or "all", "err": e, "chars": n,
                      "fields": [f_ok, f_tot]})
     n = max(1, len(recs))

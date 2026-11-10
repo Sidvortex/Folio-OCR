@@ -2,7 +2,7 @@
 
 **Licence first:** CC BY-NC-SA 4.0, gated, "solely for academic research and
 educational purposes". A model trained on it should be treated as
-non-commercial and share-alike. ``train_sft.py`` refuses a mixture containing
+non-commercial and share-alike. ``scripts/train_sft.py`` refuses a mixture containing
 it unless ``--allow-noncommercial`` is given, and the data card says so.
 
 Layout (after ``tar -zxvf images_labels.tar.gz`` in a sub-task folder such as

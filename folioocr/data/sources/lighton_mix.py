@@ -9,7 +9,7 @@ group by row group (only groups holding one of those keys are read in full),
 and renders the matching pages.
 
     hf download pixparse/pdfa-eng-wds --repo-type dataset --local-dir pdfa --include "pdfa-eng-train-0000.tar"
-    python prepare_data.py lighton-mix --shards pdfa/pdfa-eng-train-0000.tar \\
+    python scripts/prepare_data.py lighton-mix --shards pdfa/pdfa-eng-train-0000.tar \\
         --parquet "hf://datasets/lightonai/LightOnOCR-mix-0126/<path>.parquet" ... --out data/lighton
 
 ``--parquet`` takes local files or ``hf://`` paths (read remotely, column by

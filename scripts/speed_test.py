@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Pages per second, peak GPU memory and cost per 1,000 pages for one engine.
 
-    python speed_test.py --images data/resumes/images --pages 30 --engine folio --adapter runs/resume-t4/best
-    python speed_test.py --images data/resumes/images --pages 30 --engine folio --load-4bit --gpu-price 0.0
+    python scripts/speed_test.py --images data/resumes/images --pages 30 --engine folio --adapter runs/resume-t4/best
+    python scripts/speed_test.py --images data/resumes/images --pages 30 --engine folio --load-4bit --gpu-price 0.0
 
 Warm-up pages are excluded. Report the GPU name with every number: speed
 claims from different hardware are not comparable (the plan's rule).
@@ -14,7 +14,7 @@ import resource
 import sys
 import time
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from folioocr.bench.engines import PageItem, add_engine_args, make_engine  # noqa: E402
 from folioocr.imaging import IMAGE_EXTS  # noqa: E402

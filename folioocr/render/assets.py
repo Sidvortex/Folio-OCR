@@ -118,7 +118,7 @@ def find_assets_dir(explicit: Optional[str] = None) -> Path:
                  str(Path(__file__).resolve().parents[2] / "assets")):
         if cand and Path(cand).is_dir():
             return Path(cand).resolve()
-    raise FileNotFoundError("assets folder not found: run `python fetch_assets.py` first "
+    raise FileNotFoundError("assets folder not found: run `python scripts/fetch_assets.py` first "
                             "(or set FOLIO_ASSETS=/path/to/assets)")
 
 

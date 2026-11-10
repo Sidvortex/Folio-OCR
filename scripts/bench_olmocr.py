@@ -2,30 +2,30 @@
 """Run one engine on olmOCR-Bench and score it (Phase 0 baselines, gate checks).
 
     # Infinity-Parser2-Flash, common setting (1,288 px), free T4: cap the visual budget
-    python bench_olmocr.py --bench olmOCR-bench/bench_data --name flash_common \\
+    python scripts/bench_olmocr.py --bench olmOCR-bench/bench_data --name flash_common \\
         --engine folio --model infly/Infinity-Parser2-Flash --render common --max-pixels 2000000
 
     # our fine-tune
-    python bench_olmocr.py --bench olmOCR-bench/bench_data --name folio_v1 \\
+    python scripts/bench_olmocr.py --bench olmOCR-bench/bench_data --name folio_v1 \\
         --engine folio --adapter runs/resume-t4/best --render common
 
     # Chandra 2 through its own CLI, its own PDF rendering
-    python bench_olmocr.py --bench olmOCR-bench/bench_data --name chandra2_native --engine chandra --render native
+    python scripts/bench_olmocr.py --bench olmOCR-bench/bench_data --name chandra2_native --engine chandra --render native
 
     # split a long run over Kaggle sessions (re-run the same command to resume)
-    python bench_olmocr.py ... --shard 0/3
+    python scripts/bench_olmocr.py ... --shard 0/3
 
     # free GPU budget: a stratified 300-page sample (same pages for every engine with the same --seed)
-    python bench_olmocr.py ... --sample 300
+    python scripts/bench_olmocr.py ... --sample 300
 
     # score existing Markdown only
-    python bench_olmocr.py --bench olmOCR-bench/bench_data --name flash_common --score-only
+    python scripts/bench_olmocr.py --bench olmOCR-bench/bench_data --name flash_common --score-only
 """
 import argparse
 import os
 import sys
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from folioocr.bench.engines import add_engine_args, make_engine  # noqa: E402
 from folioocr.bench.olmocr_bench import run  # noqa: E402

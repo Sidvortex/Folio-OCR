@@ -2,17 +2,17 @@
 """Teacher-consensus labels for real pages without a source (Phase 2).
 
     # 1) render the pages once, so both teachers read identical images
-    python label_teachers.py stage --inputs scans/ more.pdf --stage teach/pages
+    python scripts/label_teachers.py stage --inputs scans/ more.pdf --stage teach/pages
 
     # 2) each teacher on its own (one model on the GPU at a time; re-run to resume)
     vllm serve infly/Infinity-Parser2-Pro ...            # on a box that fits it
-    python label_teachers.py run --stage teach/pages --name ip2pro --licence Apache-2.0 --cache teach/ip2pro \\
+    python scripts/label_teachers.py run --stage teach/pages --name ip2pro --licence Apache-2.0 --cache teach/ip2pro \\
         --engine openai --api-base http://localhost:8000/v1 --api-model infly/Infinity-Parser2-Pro --api-prompt doc2json
-    python label_teachers.py run --stage teach/pages --name olmocr2 --licence Apache-2.0 --cache teach/olmocr2 \\
+    python scripts/label_teachers.py run --stage teach/pages --name olmocr2 --licence Apache-2.0 --cache teach/olmocr2 \\
         --engine openai --api-base http://localhost:8001/v1 --api-model allenai/olmOCR-2-7B-1025 --api-prompt olmocr
 
     # 3) keep the pages the two agree on (>= 97% of characters); the rest go to review.jsonl
-    python label_teachers.py merge --stage teach/pages --a teach/ip2pro --b teach/olmocr2 --out data/consensus
+    python scripts/label_teachers.py merge --stage teach/pages --a teach/ip2pro --b teach/olmocr2 --out data/consensus
 
 Teachers must allow training on their output: Chandra and Surya are refused.
 On free GPUs, ``--engine folio`` runs Flash itself (or a fine-tune) as one of
@@ -23,7 +23,7 @@ import json
 import os
 import sys
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
 def main() -> None:

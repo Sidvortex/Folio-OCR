@@ -50,7 +50,7 @@ LICENCES: Dict[str, Dict[str, str]] = {
     "teacher-consensus": {
         "licence": "per page source", "commercial": "check",
         "terms": "labels agreed by two permissively licensed teachers; the page images keep their source's terms",
-        "url": "label_teachers.py"},
+        "url": "scripts/label_teachers.py"},
 }
 
 

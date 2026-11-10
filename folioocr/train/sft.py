@@ -1,6 +1,6 @@
 """Supervised fine-tuning (Phase 1 resume model, Phase 2 general SFT).
 
-    python train_sft.py --profile t4 \\
+    python scripts/train_sft.py --profile t4 \\
         --data data/resumes/labels.jsonl:3 data/general/labels.jsonl:1 \\
         --dev data/resumes/labels.jsonl --dev-tests data/resumes/tests.jsonl \\
         --out runs/resume-t4 --epochs 1

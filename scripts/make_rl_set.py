@@ -1,22 +1,22 @@
 #!/usr/bin/env python3
 """Build RL items (Phase 3): page bands with their own unit tests, from rendered label files.
 
-    python make_rl_set.py --labels data/resumes/labels.jsonl data/render_old/labels.jsonl \\
+    python scripts/make_rl_set.py --labels data/resumes/labels.jsonl data/render_old/labels.jsonl \\
         data/render_layout/labels.jsonl --out data/rl_regions --per-page 2 --max-chars 1200
 
 Each item is a band of a page cut where no block crosses (or the whole page when
 it is short), its blocks re-normalised to the crop, and tests generated from
 them. A page's dev/train split carries over to its items. Weight the item mix
 toward what the plan targets (old scans, multi-column, tables, resumes) by
-the label files you pass and by ``--data a:w`` weights in train_rl.py.
-olmOCR-synthmix pages come from ``prepare_data.py synthmix --out-rl``.
+the label files you pass and by ``--data a:w`` weights in scripts/train_rl.py.
+olmOCR-synthmix pages come from ``scripts/prepare_data.py synthmix --out-rl``.
 """
 import argparse
 import json
 import os
 import sys
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
 def main() -> None:

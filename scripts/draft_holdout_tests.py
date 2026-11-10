@@ -7,15 +7,15 @@ checking is faster than writing:
 
     holdout_src/<category>/<name>.pdf          one page per PDF, sorted into categories by you
 
-    python draft_holdout_tests.py --src holdout_src --out holdout \\
+    python scripts/draft_holdout_tests.py --src holdout_src --out holdout \\
         --engine openai --api-base http://localhost:8000/v1 --api-model infly/Infinity-Parser2-Pro --api-prompt doc2json
 
     # then open holdout/review.html next to holdout/bench_data/<category>.jsonl and, test by test,
     # set "checked" to "verified" or "rejected" (fix a test's text if it is almost right)
-    python draft_holdout_tests.py --out holdout --status
+    python scripts/draft_holdout_tests.py --out holdout --status
 
     # score any model on it exactly like olmOCR-Bench ("rejected" tests are skipped)
-    python bench_olmocr.py --bench holdout/bench_data --name folio_v1 --adapter runs/rl-t4/best
+    python scripts/bench_olmocr.py --bench holdout/bench_data --name folio_v1 --adapter runs/rl-t4/best
 
 Tests come from a reference parse (any engine, ideally a strong teacher with
 layout output): present (sentences), absent (headers/footers), order
@@ -32,7 +32,7 @@ import re
 import shutil
 import sys
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 _SENT = re.compile(r"(?<=[.!?;:])\s+|\n+")
 

@@ -2,20 +2,20 @@
 """Convert public OCR datasets to Folio labels (Phase 2 data engine).
 
     # real pages with GPT-4.1 / human transcriptions (doc2md records)
-    python prepare_data.py olmocr-mix --parquet olmocr-mix/02_loc_transcripts_train.parquet \\
+    python scripts/prepare_data.py olmocr-mix --parquet olmocr-mix/02_loc_transcripts_train.parquet \\
         --tarballs olmocr-mix/pdf_tarballs/02_loc_transcripts_train_00000.tar.gz --out data/olmocr_loc
 
     # synthetic arXiv/table pages: training pairs (SFT) and benchmark-style tests (RL)
-    python prepare_data.py synthmix --root synthmix --out-sft data/synthmix --out-rl data/rl_synthmix
+    python scripts/prepare_data.py synthmix --root synthmix --out-sft data/synthmix --out-rl data/rl_synthmix
 
     # Infinity-Doc2-5M (CC BY-NC-SA, gated, academic use only)
-    python prepare_data.py infinity-doc2 --root Infinity-Doc2-5M/Document_Parsing/doc2json --out data/infdoc2
+    python scripts/prepare_data.py infinity-doc2 --root Infinity-Doc2-5M/Document_Parsing/doc2json --out data/infdoc2
 
     # LightOnOCR-mix transcriptions joined with pdfa-eng-wds shards
-    python prepare_data.py lighton-mix --shards pdfa/pdfa-eng-train-0000.tar --parquet <files> --out data/lighton
+    python scripts/prepare_data.py lighton-mix --shards pdfa/pdfa-eng-train-0000.tar --parquet <files> --out data/lighton
 
     # look at what came out
-    python prepare_data.py preview --labels data/olmocr_loc/labels.jsonl --n 8
+    python scripts/prepare_data.py preview --labels data/olmocr_loc/labels.jsonl --n 8
 
 Every converter appends and skips pages already written, so re-running after
 a session ends continues where it stopped. Each output folder gets a
@@ -26,7 +26,7 @@ import json
 import os
 import sys
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
 def main() -> None:

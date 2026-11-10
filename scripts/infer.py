@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """Parse PDFs or page images into Markdown (and layout JSON).
 
-    python infer.py resume.pdf                                   # base Infinity-Parser2-Flash
-    python infer.py resume.pdf --adapter runs/resume-t4/best     # our fine-tune
-    python infer.py scans/ --out out/ --json --second-look
-    python infer.py resume.jpg --adapter runs/resume-t4/best --crosscheck ../ResumeOCR-Lite
-    python infer.py page.png --raw                               # print raw model output (Phase 0: check its format)
+    python scripts/infer.py resume.pdf                                   # base Infinity-Parser2-Flash
+    python scripts/infer.py resume.pdf --adapter runs/resume-t4/best     # our fine-tune
+    python scripts/infer.py scans/ --out out/ --json --second-look
+    python scripts/infer.py resume.jpg --adapter runs/resume-t4/best --crosscheck ../ResumeOCR-Lite
+    python scripts/infer.py page.png --raw                               # print raw model output (Phase 0: check its format)
 
 Writes <out>/<name>.md (pages separated by blank lines) and, with --json,
 <out>/<name>.json with blocks, boxes (0-1000) and per-page flags.
@@ -16,7 +16,7 @@ import os
 import sys
 import time
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from folioocr.imaging import IMAGE_EXTS, load_pages  # noqa: E402
 

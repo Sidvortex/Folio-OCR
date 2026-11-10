@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Download what the page renderer needs into ./assets (about 120 MB).
 
-    python fetch_assets.py                       # fonts + KaTeX into ./assets
-    python fetch_assets.py --fonts-from ../ResumeOCR-Lite/fonts   # reuse fonts you already have
-    python fetch_assets.py --skip-indic          # Latin fonts only
+    python scripts/fetch_assets.py                       # fonts + KaTeX into ./assets
+    python scripts/fetch_assets.py --fonts-from ../ResumeOCR-Lite/fonts   # reuse fonts you already have
+    python scripts/fetch_assets.py --skip-indic          # Latin fonts only
 
 Fonts: open-licensed families from github.com/google/fonts (OFL/Apache/UFL),
 the resume fonts ResumeOCR-Lite uses plus symbol, typewriter and Indic-script
@@ -18,7 +18,7 @@ import shutil
 import sys
 from pathlib import Path
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from folioocr.render.assets import (EXTRA_FAMILIES, INDIC, KATEX_VERSION, RESUME_FAMILIES,  # noqa: E402
                                     fetch_font_family, fetch_katex)

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Does A beat B? Paired bootstrap on two result files scored on the same pages.
 
-    python compare.py results/olmocr/folio_v1.json results/olmocr/flash_common.json
-    python compare.py results/resume/folio_v1.json results/resume/chandra2.json
+    python scripts/compare.py results/olmocr/folio_v1.json results/olmocr/flash_common.json
+    python scripts/compare.py results/resume/folio_v1.json results/resume/chandra2.json
 
 Prints both scores, the difference, its 95% interval and whether it excludes
 zero (the plan's rule for claiming a win). Works on olmOCR-Bench, Resume-Bench
@@ -15,7 +15,7 @@ import json
 import os
 import sys
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from folioocr.bench.stats import paired_bootstrap, paired_bootstrap_pages  # noqa: E402
 

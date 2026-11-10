@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """Evaluate a model on a synthetic (or any labelled) dev set: unit tests, CER, fields, loops, speed.
 
-    python bench_dev.py --labels data/resumes/labels.jsonl --tests data/resumes/tests.jsonl --name flash
-    python bench_dev.py --labels data/resumes/labels.jsonl --tests data/resumes/tests.jsonl --name v1 --adapter runs/resume-t4/best
+    python scripts/bench_dev.py --labels data/resumes/labels.jsonl --tests data/resumes/tests.jsonl --name flash
+    python scripts/bench_dev.py --labels data/resumes/labels.jsonl --tests data/resumes/tests.jsonl --name v1 --adapter runs/resume-t4/best
 
 Uses pages with split=dev by default (``--split all`` for everything). Writes
-results/dev/<name>.json with per-test results, so ``compare.py`` can test
+results/dev/<name>.json with per-test results, so ``scripts/compare.py`` can test
 whether one model beats another on the same pages.
 """
 import argparse
@@ -13,7 +13,7 @@ import json
 import os
 import sys
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
 def main() -> None:

@@ -8,7 +8,7 @@ A mixture file (``mixtures/*.json``):
 
 Weights are shares of training samples (they are normalised). Every label
 file's folder should hold the ``source.json`` its adapter wrote; ``licences``
-reads them, and ``train_sft.py`` refuses a mixture with a non-commercial
+reads them, and ``scripts/train_sft.py`` refuses a mixture with a non-commercial
 source unless told otherwise. ``data_card`` writes the card the plan asks for:
 one line per source with its licence, plus the contamination counts.
 """

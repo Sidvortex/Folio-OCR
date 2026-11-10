@@ -2,7 +2,7 @@
 """Write OmniDocBench predictions (one Markdown file per page image) for its official scorer.
 
     hf download opendatalab/OmniDocBench --repo-type dataset --local-dir OmniDocBench
-    python bench_omnidoc.py --images OmniDocBench/images --name folio_v1 --adapter runs/resume-t4/best
+    python scripts/bench_omnidoc.py --images OmniDocBench/images --name folio_v1 --adapter runs/resume-t4/best
 
 Then score with the official code (github.com/opendatalab/OmniDocBench): set
 the ground-truth JSON and ``results/omnidoc/<name>`` as the prediction folder
@@ -14,7 +14,7 @@ import argparse
 import os
 import sys
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from folioocr.bench.engines import PageItem, add_engine_args, make_engine  # noqa: E402
 from folioocr.imaging import IMAGE_EXTS  # noqa: E402

@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """GRPO on top of an SFT adapter (Phase 3), sized for free GPUs by default.
 
-    python train_rl.py --profile t4 --adapter runs/general-t4/best \\
+    python scripts/train_rl.py --profile t4 --adapter runs/general-t4/best \\
         --data data/rl_regions/labels.jsonl:3 data/rl_synthmix/labels.jsonl:1 --out runs/rl-t4 --steps 200 --resume
 
     # two T4s on Kaggle: each GPU samples its own items, gradients are averaged
-    torchrun --nproc_per_node 2 train_rl.py --profile t4 ...
+    torchrun --nproc_per_node 2 scripts/train_rl.py --profile t4 ...
 
 Watch ``<out>/train_log.jsonl`` (reward and its parts, skipped groups, loops),
 ``<out>/dev_log.jsonl`` (dev reward, tests, CER every --eval-every steps; the run
@@ -18,7 +18,7 @@ import json
 import os
 import sys
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 RL_PROFILES = {
     "t4": dict(load_4bit=True, dtype="float16", group=4, prompts_per_step=2, max_new_tokens=1024,

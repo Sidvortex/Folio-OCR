@@ -2,14 +2,14 @@
 """Merge LoRA adapters into the base model (Phase 4), optionally averaging several fine-tunes.
 
     # one adapter -> a standalone model folder (loads with --model <out> everywhere, no --adapter)
-    python merge_lora.py --adapter runs/rl-t4/best --out models/folio-v1
+    python scripts/merge_lora.py --adapter runs/rl-t4/best --out models/folio-v1
 
     # average the best SFT and RL adapters in weight space; keep it only if dev scores improve
-    python merge_lora.py --adapter runs/general-t4/best runs/rl-t4/best --weights 0.5 0.5 --out models/folio-avg
-    python bench_dev.py --labels data/dev_old/labels.jsonl --name avg --model models/folio-avg
+    python scripts/merge_lora.py --adapter runs/general-t4/best runs/rl-t4/best --weights 0.5 0.5 --out models/folio-avg
+    python scripts/bench_dev.py --labels data/dev_old/labels.jsonl --name avg --model models/folio-avg
 
     # then a 4-bit copy for consumer GPUs (needs CUDA), and re-run every benchmark on it
-    python merge_lora.py quantize --model models/folio-v1 --out models/folio-v1-nf4 --bits 4
+    python scripts/merge_lora.py quantize --model models/folio-v1 --out models/folio-v1-nf4 --bits 4
 
 Merging runs on the CPU (a 2B model needs about 5 GB of RAM in bfloat16).
 """
@@ -18,7 +18,7 @@ import json
 import os
 import sys
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
 def main() -> None:

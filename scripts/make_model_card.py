@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Write the model card (Phase 4) from the runs and result files, so every number in it is one we measured.
 
-    python make_model_card.py --name folio-ocr-v1 --model-dir models/folio-v1 \\
+    python scripts/make_model_card.py --name folio-ocr-v1 --model-dir models/folio-v1 \\
         --sft-run runs/general-t4 --rl-run runs/rl-t4 \\
         --olmocr results/olmocr/folio_v1_s300.json --olmocr-baseline results/olmocr/flash_s300.json \\
             results/olmocr/chandra2_s300.json results/olmocr/surya2_s300.json \\
@@ -20,7 +20,7 @@ import json
 import os
 import sys
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
 def _load(p):
@@ -123,7 +123,7 @@ def main() -> None:
     if noncommercial:
         L += ["**Licence:** the training data includes a non-commercial source (see the data card), so this model "
               "is released for non-commercial use only.", ""]
-    L += ["## Use", "", "```bash", f"python infer.py page.pdf --model {args.model_dir or args.name} --json", "```", "",
+    L += ["## Use", "", "```bash", f"python scripts/infer.py page.pdf --model {args.model_dir or args.name} --json", "```", "",
           "Prompts are Infinity-Parser2's own (`doc2json`, `doc2md`); generation stops on `<|im_end|>`.", ""]
     L += ["## Training", ""]
     if sft:
@@ -173,7 +173,7 @@ def main() -> None:
           "- Scores are from our harness and can differ from published numbers (rendering size, token caps).",
           "- Handwriting beyond notes on printed forms, charts and scripts other than Latin and the main Indic "
           "ones are out of scope.",
-          "- On resumes, emails, phone numbers and dates flagged by `infer.py --crosscheck` should be checked by a "
+          "- On resumes, emails, phone numbers and dates flagged by `scripts/infer.py --crosscheck` should be checked by a "
           "person: the model can still misread digits.", ""]
     text = "\n".join(L)
     dst = args.out or (os.path.join(args.model_dir, "README.md") if args.model_dir else None)

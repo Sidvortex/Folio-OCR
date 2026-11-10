@@ -83,7 +83,7 @@ def paired_bootstrap_pages(rows_a: List[dict], rows_b: List[dict], metric: str, 
         raise ValueError(metric)
 
     if metric == "line_cer" and not all("err" in r for r in rows_a + rows_b):
-        raise ValueError("result files predate per-page error counts; re-run `bench_resume.py score`")
+        raise ValueError("result files predate per-page error counts; re-run `scripts/bench_resume.py score`")
     bmap = {r["id"]: r for r in rows_b}
     ids = [r["id"] for r in rows_a if r["id"] in bmap]
     if not ids:

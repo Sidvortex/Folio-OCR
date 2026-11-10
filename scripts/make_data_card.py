@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Write the data card for a training mixture (one licence line per source, plus contamination counts).
 
-    python make_data_card.py --mixture mixtures/general-free-v1.json --contamination results/contamination.json \\
+    python scripts/make_data_card.py --mixture mixtures/general-free-v1.json --contamination results/contamination.json \\
         --out docs/DATA_CARD.md
-    python make_data_card.py --run runs/general-t4          # the sources a run actually trained on
+    python scripts/make_data_card.py --run runs/general-t4          # the sources a run actually trained on
 
 Each label folder's ``source.json`` (written by make_dataset / prepare_data /
 label_teachers) supplies its licence; a missing one shows up as "unknown".
@@ -13,7 +13,7 @@ import json
 import os
 import sys
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from folioocr.data.mixture import data_card, load_mixture  # noqa: E402
 
@@ -22,9 +22,9 @@ def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     g = ap.add_mutually_exclusive_group(required=True)
     g.add_argument("--mixture")
-    g.add_argument("--run", help="a train_sft.py output folder (reads its train_config.json)")
+    g.add_argument("--run", help="a scripts/train_sft.py output folder (reads its train_config.json)")
     g.add_argument("--data", nargs="+", help="label files, optionally path:weight")
-    ap.add_argument("--contamination", default=None, help="report from dedup.py check")
+    ap.add_argument("--contamination", default=None, help="report from scripts/dedup.py check")
     ap.add_argument("--out", default=None, help="default: print")
     args = ap.parse_args()
     roles, name, task_mix = {}, "", ""

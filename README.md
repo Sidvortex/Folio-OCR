@@ -8,11 +8,11 @@ On free GPUs the realistic target is **Tier A**: the best resume reader of every
 
 | Plan phase | What is here | Notebook |
 |---|---|---|
-| 0. Harness and baselines | `bench_olmocr.py`, `bench_resume.py`, `bench_dev.py`, `bench_omnidoc.py`, `compare.py`, `speed_test.py` | `folio_phase0_phase1` |
-| 1. Resume model | synthetic page renderer, `train_sft.py` (4-bit LoRA on a T4), `infer.py` | `folio_phase0_phase1` |
-| 2. Data engine and SFT | `prepare_data.py` (olmOCR-mix, olmOCR-synthmix, Infinity-Doc2-5M, LightOnOCR-mix), `dedup.py` (contamination), `label_teachers.py` (two-teacher labels), `mixtures/`, `make_data_card.py` | `folio_phase2_4` |
-| 3. RL with checkable rewards | `make_rl_set.py` (page bands with their own tests), `train_rl.py` (GRPO: unit tests, edit distance, TEDS, fields, format) | `folio_phase2_4` |
-| 4. Compress, verify, release | `merge_lora.py` (merge, checkpoint averaging, 4/8-bit), `draft_holdout_tests.py`, `make_model_card.py` | `folio_phase2_4` |
+| 0. Harness and baselines | `scripts/bench_olmocr.py`, `scripts/bench_resume.py`, `scripts/bench_dev.py`, `scripts/bench_omnidoc.py`, `scripts/compare.py`, `scripts/speed_test.py` | `folio_phase0_phase1` |
+| 1. Resume model | synthetic page renderer, `scripts/train_sft.py` (4-bit LoRA on a T4), `scripts/infer.py` | `folio_phase0_phase1` |
+| 2. Data engine and SFT | `scripts/prepare_data.py` (olmOCR-mix, olmOCR-synthmix, Infinity-Doc2-5M, LightOnOCR-mix), `scripts/dedup.py` (contamination), `scripts/label_teachers.py` (two-teacher labels), `mixtures/`, `scripts/make_data_card.py` | `folio_phase2_4` |
+| 3. RL with checkable rewards | `scripts/make_rl_set.py` (page bands with their own tests), `scripts/train_rl.py` (GRPO: unit tests, edit distance, TEDS, fields, format) | `folio_phase2_4` |
+| 4. Compress, verify, release | `scripts/merge_lora.py` (merge, checkpoint averaging, 4/8-bit), `scripts/draft_holdout_tests.py`, `scripts/make_model_card.py` | `folio_phase2_4` |
 
 `docs/PHASES.md` maps every gate of the plan (G0–G4) to the commands that decide it.
 
@@ -44,16 +44,16 @@ Checked here, on CPU:
 - **Flash's output format:** whether it writes a ```` ```json ```` fence, and how it writes formula blocks. Step 3a of the first notebook shows you.
 - **Bitsandbytes quantisation:** needs CUDA.
 - **The Chandra and Surya command-line tools** on real hardware.
-- **The real dataset files:** the adapters follow the dataset cards. Infinity-Doc2-5M is gated, so check its first converted pages with `prepare_data.py preview`.
+- **The real dataset files:** the adapters follow the dataset cards. Infinity-Doc2-5M is gated, so check its first converted pages with `scripts/prepare_data.py preview`.
 
 ## Licences of the training data (read before Phase 2)
 
 - **Infinity-Doc2-5M** is **CC BY-NC-SA 4.0 and gated for academic use only**. A model trained on it is non-commercial.
-  - `train_sft.py` refuses such a mixture unless you pass `--allow-noncommercial`.
+  - `scripts/train_sft.py` refuses such a mixture unless you pass `--allow-noncommercial`.
   - The free mixture (`mixtures/general-free-v1.json`) leaves it out.
 - **olmOCR-mix and olmOCR-synthmix** are ODC-BY. Their transcriptions were written by GPT-4.1 and Claude, so have a lawyer look before any commercial use (the plan's rule).
 - **LightOnOCR-mix** falls under Common Crawl's and Digital Corpora's terms.
-- **Each converted folder** gets a `source.json` with its licence line, and `make_data_card.py` turns these into the data card.
+- **Each converted folder** gets a `source.json` with its licence line, and `scripts/make_data_card.py` turns these into the data card.
 
 ## Setup (EndeavourOS, global Python)
 
@@ -62,7 +62,7 @@ Checked here, on CPU:
 pip install --user --break-system-packages -r requirements.txt
 pip install --user --break-system-packages --no-deps olmocr==0.4.27
 python -m playwright install chromium      # if Chromium won't start: sudo pacman -S chromium (pulls its libraries)
-python fetch_assets.py --fonts-from ../ResumeOCR-Lite/fonts   # or just: python fetch_assets.py  (~85 MB)
+python scripts/fetch_assets.py --fonts-from ../ResumeOCR-Lite/fonts   # or just: python scripts/fetch_assets.py  (~85 MB)
 python -m pytest -q tests                  # model tests skip without torch
 
 # only if you also want to train or run the model locally (CPU works for tests, not for real training)
@@ -80,29 +80,29 @@ python -m folioocr.render.make_dataset --out data/general --n 2500 --workers 6 -
     --mix "article=0.35,table=0.3,math=0.15,letter=0.1,indic=0.1"
 
 # 2. (GPU) the base model on held-out dev pages
-python bench_dev.py --labels data/resumes/labels.jsonl --tests data/resumes/tests.jsonl --name flash_base --batch-size 4
+python scripts/bench_dev.py --labels data/resumes/labels.jsonl --tests data/resumes/tests.jsonl --name flash_base --batch-size 4
 
 # 3. (GPU) fine-tune; on Kaggle's two T4s prefix with: accelerate launch --num_processes 2 --mixed_precision fp16
-python train_sft.py --profile t4 --data data/resumes/labels.jsonl:3 data/general/labels.jsonl:2 \
+python scripts/train_sft.py --profile t4 --data data/resumes/labels.jsonl:3 data/general/labels.jsonl:2 \
     --dev data/resumes/labels.jsonl --dev-tests data/resumes/tests.jsonl --out runs/resume-t4 --epochs 1 --resume
 
 # 4. (GPU) the fine-tune on the same pages, and the paired comparison
-python bench_dev.py --labels data/resumes/labels.jsonl --tests data/resumes/tests.jsonl --name resume_v1 \
+python scripts/bench_dev.py --labels data/resumes/labels.jsonl --tests data/resumes/tests.jsonl --name resume_v1 \
     --adapter runs/resume-t4/adapter --batch-size 4
-python compare.py results/dev/resume_v1.json results/dev/flash_base.json
+python scripts/compare.py results/dev/resume_v1.json results/dev/flash_base.json
 
 # 5. use it
-python infer.py my_resume.pdf --adapter runs/resume-t4/adapter --json
+python scripts/infer.py my_resume.pdf --adapter runs/resume-t4/adapter --json
 ```
 
 Synthetic dev pages show learning. **Gate G1 is decided on Resume-Bench**: real resumes, built once with ResumeOCR-Lite's ground-truth tools. Every engine keeps page headers and footers there, since a resume's footer can hold its email.
 
 ```bash
-python bench_resume.py build --gt ../ResumeOCR-Lite/data/realtest/gt.jsonl --out resume_bench
-python bench_resume.py run --bench resume_bench --name flash --engine folio
-python bench_resume.py run --bench resume_bench --name resume_v1 --engine folio --adapter runs/resume-t4/adapter
-python bench_resume.py run --bench resume_bench --name chandra2 --engine chandra
-python compare.py results/resume/resume_v1.json results/resume/chandra2.json   # page CER, fields, tests
+python scripts/bench_resume.py build --gt ../ResumeOCR-Lite/data/realtest/gt.jsonl --out resume_bench
+python scripts/bench_resume.py run --bench resume_bench --name flash --engine folio
+python scripts/bench_resume.py run --bench resume_bench --name resume_v1 --engine folio --adapter runs/resume-t4/adapter
+python scripts/bench_resume.py run --bench resume_bench --name chandra2 --engine chandra
+python scripts/compare.py results/resume/resume_v1.json results/resume/chandra2.json   # page CER, fields, tests
 ```
 
 ## Phases 2–4 at a glance
@@ -111,24 +111,24 @@ The full commands, with each gate's pass rule, are in `docs/PHASES.md`.
 
 ```bash
 # Phase 2: public pages -> labels, contamination check, data card, general SFT from the Phase 1 adapter
-python prepare_data.py olmocr-mix --parquet olmocr-mix/02_loc_transcripts_train.parquet \
+python scripts/prepare_data.py olmocr-mix --parquet olmocr-mix/02_loc_transcripts_train.parquet \
     --tarballs olmocr-mix/pdf_tarballs/02_loc_transcripts_train_00000.tar.gz --out data/olmocr_hist
-python dedup.py index --out eval_index.npz --olmocr olmOCR-bench/bench_data --resume resume_bench
-python dedup.py check --index eval_index.npz --labels data/*/labels.jsonl --report results/contamination.json --write-clean
-python make_data_card.py --mixture mixtures/general-free-v1.json --contamination results/contamination.json
-accelerate launch --num_processes 2 --mixed_precision fp16 train_sft.py --profile t4 \
+python scripts/dedup.py index --out eval_index.npz --olmocr olmOCR-bench/bench_data --resume resume_bench
+python scripts/dedup.py check --index eval_index.npz --labels data/*/labels.jsonl --report results/contamination.json --write-clean
+python scripts/make_data_card.py --mixture mixtures/general-free-v1.json --contamination results/contamination.json
+accelerate launch --num_processes 2 --mixed_precision fp16 scripts/train_sft.py --profile t4 \
     --mixture mixtures/general-free-v1.json --init-adapter runs/resume-t4/best --out runs/general-t4 --resume
 
 # Phase 3: RL on page bands (GRPO; each of the two GPUs samples its own items)
-python make_rl_set.py --labels data/resumes/labels.jsonl data/render_old/labels.jsonl --out data/rl_regions
-torchrun --nproc_per_node 2 train_rl.py --profile t4 --adapter runs/general-t4/best \
+python scripts/make_rl_set.py --labels data/resumes/labels.jsonl data/render_old/labels.jsonl --out data/rl_regions
+torchrun --nproc_per_node 2 scripts/train_rl.py --profile t4 --adapter runs/general-t4/best \
     --data data/rl_regions/labels.jsonl --out runs/rl-t4 --steps 400 --resume
 
 # Phase 4: merge (optionally average SFT + RL), quantise, holdout, model card
-python merge_lora.py --adapter runs/rl-t4/best --out models/folio-v1
-python merge_lora.py quantize --model models/folio-v1 --out models/folio-v1-nf4 --bits 4
-python draft_holdout_tests.py --src holdout_src --out holdout --engine folio
-python make_model_card.py --name folio-ocr-v1 --model-dir models/folio-v1 --sft-run runs/general-t4 --rl-run runs/rl-t4 ...
+python scripts/merge_lora.py --adapter runs/rl-t4/best --out models/folio-v1
+python scripts/merge_lora.py quantize --model models/folio-v1 --out models/folio-v1-nf4 --bits 4
+python scripts/draft_holdout_tests.py --src holdout_src --out holdout --engine folio
+python scripts/make_model_card.py --name folio-ocr-v1 --model-dir models/folio-v1 --sft-run runs/general-t4 --rl-run runs/rl-t4 ...
 ```
 
 ## The label format
@@ -185,7 +185,7 @@ new syntax:
   - **olmOCR-Bench:** common or native rendering. Samples are nested, so a 600-page sample contains the 300-page one, and the shards of a sample are that sample, split.
   - **Resume-Bench:** field accuracy, order-free line CER, extra text and tests.
   - **OmniDocBench:** predictions only, for its official scorer.
-  - **`compare.py`:** paired bootstraps on unit tests, page CER and field accuracy.
+  - **`scripts/compare.py`:** paired bootstraps on unit tests, page CER and field accuracy.
   - **OpenAI-compatible engine:** an `openai` engine runs any compatible endpoint (vLLM) as a baseline or a teacher.
 
 ## Free-GPU expectations (estimates: measure before planning)

@@ -2,15 +2,15 @@
 """Contamination check: index the evaluation pages, then check training data against them.
 
     # 1) index every evaluation set once (pages, text, test strings, file hashes)
-    python dedup.py index --out eval_index.npz --olmocr olmOCR-bench/bench_data \\
+    python scripts/dedup.py index --out eval_index.npz --olmocr olmOCR-bench/bench_data \\
         --omnidoc OmniDocBench --resume resume_bench --holdout holdout/bench_data
 
     # 2) check each training source; --write-clean writes labels.clean.jsonl next to it
-    python dedup.py check --index eval_index.npz --labels data/resumes/labels.jsonl data/olmocr_loc/labels.jsonl \\
+    python scripts/dedup.py check --index eval_index.npz --labels data/resumes/labels.jsonl data/olmocr_loc/labels.jsonl \\
         --report results/contamination.json --write-clean
 
     # 3) (optional) see how far apart pages are on your data before trusting the image threshold
-    python dedup.py calibrate --images data/general/images --n 60
+    python scripts/dedup.py calibrate --images data/general/images --n 60
 
 Train on the ``labels.clean.jsonl`` files and publish the report's counts with
 any claim (the plan's rule). See folioocr/data/dedup.py for the four signals.
@@ -21,7 +21,7 @@ import json
 import os
 import sys
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
 def main() -> None:

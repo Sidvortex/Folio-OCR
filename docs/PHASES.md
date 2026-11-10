@@ -11,11 +11,11 @@ Where that happens, the free version of the rule is written next to the plan's r
 
 ## Rules for every gate
 
-- **One harness for every model:** `bench_olmocr.py`, `bench_resume.py` and `bench_dev.py`. Each run writes `results/<bench>/<name>.json`, including the settings it used.
-- **What "A beats B" means:** `compare.py A.json B.json` reports *significant*. That is, the 95% paired-bootstrap interval of A − B excludes zero, with documents resampled within categories.
+- **One harness for every model:** `scripts/bench_olmocr.py`, `scripts/bench_resume.py` and `scripts/bench_dev.py`. Each run writes `results/<bench>/<name>.json`, including the settings it used.
+- **What "A beats B" means:** `scripts/compare.py A.json B.json` reports *significant*. That is, the 95% paired-bootstrap interval of A − B excludes zero, with documents resampled within categories.
 - **Benchmarks only at gates:**
   - Run each public benchmark once per candidate per gate.
-  - Choose checkpoints on dev sets (`runs/<run>/dev_log.jsonl`, `bench_dev.py`), never on a benchmark.
+  - Choose checkpoints on dev sets (`runs/<run>/dev_log.jsonl`, `scripts/bench_dev.py`), never on a benchmark.
 - **One sample for every model:** on free GPUs, olmOCR-Bench runs use `--sample 300 --seed 0` for every model, so every model sees the same pages.
   - On 300 pages, one model's interval is about ±2–3 points; the runner prints it.
   - Paired comparisons on the same pages are much tighter.
@@ -39,13 +39,13 @@ hf download allenai/olmOCR-bench --repo-type dataset --local-dir olmOCR-bench
 
 ```bash
 # Flash, the model everything else is measured against (one T4, ~1-2 h)
-python bench_olmocr.py --bench olmOCR-bench/bench_data --name flash_s300 --sample 300 \
+python scripts/bench_olmocr.py --bench olmOCR-bench/bench_data --name flash_s300 --sample 300 \
     --batch-size 4 --max-new-tokens 6000
 
 # competitors: a separate notebook, because they pin their own library versions
 pip install -r requirements-competitors.txt
-python bench_olmocr.py --bench olmOCR-bench/bench_data --name surya2_s300 --sample 300 --engine surya
-python bench_olmocr.py --bench olmOCR-bench/bench_data --name chandra2_s300 --sample 300 --engine chandra
+python scripts/bench_olmocr.py --bench olmOCR-bench/bench_data --name surya2_s300 --sample 300 --engine surya
+python scripts/bench_olmocr.py --bench olmOCR-bench/bench_data --name chandra2_s300 --sample 300 --engine chandra
 ```
 
 **Chandra 2 on a T4:** Chandra 2 loads in bfloat16, which the T4 runs slowly or not at all. If it fails, run it where it works and score its Markdown here with `--engine mddir --md-dir <folder of <key>.md>`. A paid API's output is a different system from the released weights, so label it as such.
@@ -54,11 +54,11 @@ python bench_olmocr.py --bench olmOCR-bench/bench_data --name chandra2_s300 --sa
 
 ```bash
 for px in 1288 1600 2048; do
-  python bench_olmocr.py --bench olmOCR-bench/bench_data --name flash_px${px} --sample 300 \
+  python scripts/bench_olmocr.py --bench olmOCR-bench/bench_data --name flash_px${px} --sample 300 \
       --categories old_scans,multi_column,table_tests,long_tiny_text \
       --longest-side $px --max-pixels $((px * px)) --batch-size 2
 done
-python compare.py results/olmocr/flash_px1600.json results/olmocr/flash_px1288.json
+python scripts/compare.py results/olmocr/flash_px1600.json results/olmocr/flash_px1288.json
 ```
 
 - **Category names** are the `.jsonl` files in `bench_data`. The runner lists them if a name is wrong.
@@ -67,7 +67,7 @@ python compare.py results/olmocr/flash_px1600.json results/olmocr/flash_px1288.j
 **Speed and memory**, for the efficiency table:
 
 ```bash
-python speed_test.py --images bench_cache/long1288 --pages 20 --name flash_t4 --batch-size 4
+python scripts/speed_test.py --images bench_cache/long1288 --pages 20 --name flash_t4 --batch-size 4
 ```
 
 **Resume-Bench v0:**
@@ -76,7 +76,7 @@ python speed_test.py --images bench_cache/long1288 --pages 20 --name flash_t4 --
 - Then freeze them. The tests never change after this step.
 
 ```bash
-python bench_resume.py build --gt ../ResumeOCR-Lite/data/realtest/gt.jsonl --out resume_bench
+python scripts/bench_resume.py build --gt ../ResumeOCR-Lite/data/realtest/gt.jsonl --out resume_bench
 ```
 
 **If G0 fails:** fix the harness. No training starts against a ruler we don't trust.
@@ -99,20 +99,20 @@ On one GPU, `runs/<run>/best` holds the checkpoint with the best dev score. With
 
 ```bash
 # every model on the same real pages; headers and footers are kept for all of them
-python bench_resume.py run --bench resume_bench --name flash
-python bench_resume.py run --bench resume_bench --name resume_v1 --adapter runs/resume-t4/best
-python bench_resume.py run --bench resume_bench --name surya2 --engine surya
-python bench_resume.py run --bench resume_bench --name chandra2 --engine chandra
+python scripts/bench_resume.py run --bench resume_bench --name flash
+python scripts/bench_resume.py run --bench resume_bench --name resume_v1 --adapter runs/resume-t4/best
+python scripts/bench_resume.py run --bench resume_bench --name surya2 --engine surya
+python scripts/bench_resume.py run --bench resume_bench --name chandra2 --engine chandra
 
 # page CER, field accuracy and unit tests, each with its paired interval
-python compare.py results/resume/resume_v1.json results/resume/chandra2.json
-python compare.py results/resume/resume_v1.json results/resume/surya2.json
-python compare.py results/resume/resume_v1.json results/resume/flash.json
+python scripts/compare.py results/resume/resume_v1.json results/resume/chandra2.json
+python scripts/compare.py results/resume/resume_v1.json results/resume/surya2.json
+python scripts/compare.py results/resume/resume_v1.json results/resume/flash.json
 
 # no general regression: the G0 sample
-python bench_olmocr.py --bench olmOCR-bench/bench_data --name resume_v1_s300 --sample 300 \
+python scripts/bench_olmocr.py --bench olmOCR-bench/bench_data --name resume_v1_s300 --sample 300 \
     --adapter runs/resume-t4/best --batch-size 4 --max-new-tokens 6000
-python compare.py results/olmocr/resume_v1_s300.json results/olmocr/flash_s300.json
+python scripts/compare.py results/olmocr/resume_v1_s300.json results/olmocr/flash_s300.json
 ```
 
 **Pass:** `resume_v1` beats every other model on both page CER and field accuracy, significantly, and passes the olmOCR rule above.
@@ -127,7 +127,7 @@ python compare.py results/olmocr/resume_v1_s300.json results/olmocr/flash_s300.j
 **What to read when it fails:**
 
 - **`fields_by_kind`** in the result files (email, phone, URL, date) shows which kind of field is failing.
-- **`--crosscheck`** shows whether ResumeOCR-Lite's line reader disagrees on those fields. Example: `infer.py page.jpg --adapter ... --crosscheck ../ResumeOCR-Lite`.
+- **`--crosscheck`** shows whether ResumeOCR-Lite's line reader disagrees on those fields. Example: `scripts/infer.py page.jpg --adapter ... --crosscheck ../ResumeOCR-Lite`.
 
 ## G2: general SFT (end of Phase 2)
 
@@ -152,14 +152,14 @@ hf download allenai/olmOCR-mix-1025 --repo-type dataset --local-dir olmocr-mix -
     "02_loc_transcripts_eval.parquet" "pdf_tarballs/02_loc_transcripts_eval_*"
 hf download allenai/olmOCR-synthmix-1025 --repo-type dataset --local-dir synthmix
 
-python prepare_data.py olmocr-mix --parquet olmocr-mix/00_documents_train.parquet \
+python scripts/prepare_data.py olmocr-mix --parquet olmocr-mix/00_documents_train.parquet \
     --tarballs olmocr-mix/pdf_tarballs/00_documents_train_00000.tar.gz --out data/olmocr_docs --limit 3000
-python prepare_data.py olmocr-mix --parquet olmocr-mix/02_loc_transcripts_train.parquet \
+python scripts/prepare_data.py olmocr-mix --parquet olmocr-mix/02_loc_transcripts_train.parquet \
     --tarballs olmocr-mix/pdf_tarballs/02_loc_transcripts_train_00000.tar.gz --out data/olmocr_hist --limit 1500
-python prepare_data.py olmocr-mix --parquet olmocr-mix/03_national_archives_train.parquet \
+python scripts/prepare_data.py olmocr-mix --parquet olmocr-mix/03_national_archives_train.parquet \
     --tarballs olmocr-mix/pdf_tarballs/03_national_archives_train_00000.tar.gz --out data/olmocr_hist --limit 1500
-python prepare_data.py synthmix --root synthmix --out-sft data/synthmix --out-rl data/rl_synthmix
-python prepare_data.py preview --labels data/olmocr_hist/labels.jsonl --n 8      # look before training
+python scripts/prepare_data.py synthmix --root synthmix --out-sft data/synthmix --out-rl data/rl_synthmix
+python scripts/prepare_data.py preview --labels data/olmocr_hist/labels.jsonl --n 8      # look before training
 
 # our renders (CPU: run these on your own computer and upload data/)
 python -m folioocr.render.make_dataset --out data/render_old --n 4000 --workers 6 --prefix o --start-seed 2000000 \
@@ -175,7 +175,7 @@ python -m folioocr.render.make_dataset --out data/dev_old --n 300 --workers 6 --
     --mix "article=0.5,letter=0.25,table=0.25" --conditions old=1 --dev-frac 1
 python -m folioocr.render.make_dataset --out data/dev_multicol --n 300 --workers 6 --prefix dm --start-seed 9500000 \
     --mix article=1 --dev-frac 1
-python prepare_data.py olmocr-mix --parquet olmocr-mix/02_loc_transcripts_eval.parquet \
+python scripts/prepare_data.py olmocr-mix --parquet olmocr-mix/02_loc_transcripts_eval.parquet \
     --tarballs olmocr-mix/pdf_tarballs/02_loc_transcripts_eval_* --out data/dev_loc --dev-frac 1
 ```
 
@@ -186,12 +186,12 @@ python prepare_data.py olmocr-mix --parquet olmocr-mix/02_loc_transcripts_eval.p
 - The mixture presets in `mixtures/` already point at the clean files.
 
 ```bash
-python dedup.py index --out eval_index.npz --olmocr olmOCR-bench/bench_data --resume resume_bench \
+python scripts/dedup.py index --out eval_index.npz --olmocr olmOCR-bench/bench_data --resume resume_bench \
     --labels dev_old=data/dev_old/labels.jsonl dev_multicol=data/dev_multicol/labels.jsonl dev_loc=data/dev_loc/labels.jsonl
-python dedup.py check --index eval_index.npz --report results/contamination.json --write-clean --labels \
+python scripts/dedup.py check --index eval_index.npz --report results/contamination.json --write-clean --labels \
     data/olmocr_docs/labels.jsonl data/olmocr_hist/labels.jsonl data/synthmix/labels.jsonl \
     data/render_old/labels.jsonl data/render_layout/labels.jsonl
-python make_data_card.py --mixture mixtures/general-free-v1.json --contamination results/contamination.json \
+python scripts/make_data_card.py --mixture mixtures/general-free-v1.json --contamination results/contamination.json \
     --out docs/DATA_CARD.md
 ```
 
@@ -199,10 +199,10 @@ python make_data_card.py --mixture mixtures/general-free-v1.json --contamination
 
 - This continues from the Phase 1 adapter, with resumes still 15% of the mix so the resume skill stays.
 - `--samples-per-epoch` sets the run's length. Measure with `--max-steps 20` first.
-- `train_sft.py` refuses a mixture with a non-commercial source (Infinity-Doc2-5M is CC BY-NC-SA) unless you pass `--allow-noncommercial`.
+- `scripts/train_sft.py` refuses a mixture with a non-commercial source (Infinity-Doc2-5M is CC BY-NC-SA) unless you pass `--allow-noncommercial`.
 
 ```bash
-accelerate launch --num_processes 2 --mixed_precision fp16 train_sft.py --profile t4 \
+accelerate launch --num_processes 2 --mixed_precision fp16 scripts/train_sft.py --profile t4 \
     --mixture mixtures/general-free-v1.json --init-adapter runs/resume-t4/best \
     --dev data/dev_old/labels.jsonl --dev-tests data/dev_old/tests.jsonl \
     --out runs/general-t4 --samples-per-epoch 12000 --resume
@@ -210,7 +210,7 @@ accelerate launch --num_processes 2 --mixed_precision fp16 train_sft.py --profil
 
 **The control (optional on free GPUs).** Train the same recipe from `Qwen/Qwen3.5-2B` (add `--model Qwen/Qwen3.5-2B`, and drop `--init-adapter`). This shows how much of the gain comes from our data rather than Flash's.
 
-**Formulas:** before training on math pages, check one raw Flash output on a page with a display formula (`infer.py page.png --raw`).
+**Formulas:** before training on math pages, check one raw Flash output on a page with a display formula (`scripts/infer.py page.png --raw`).
 
 - Our labels write formula blocks as `$$...$$`.
 - If Flash writes them bare, decide which convention to keep before training, because olmOCR's math tests read `$$` blocks.
@@ -219,18 +219,18 @@ accelerate launch --num_processes 2 --mixed_precision fp16 train_sft.py --profil
 
 ```bash
 for d in dev_old dev_multicol dev_loc; do
-  python bench_dev.py --labels data/$d/labels.jsonl --tests data/$d/tests.jsonl --name flash_$d --limit 120 --batch-size 4
-  python bench_dev.py --labels data/$d/labels.jsonl --tests data/$d/tests.jsonl --name general_$d --limit 120 \
+  python scripts/bench_dev.py --labels data/$d/labels.jsonl --tests data/$d/tests.jsonl --name flash_$d --limit 120 --batch-size 4
+  python scripts/bench_dev.py --labels data/$d/labels.jsonl --tests data/$d/tests.jsonl --name general_$d --limit 120 \
       --batch-size 4 --adapter runs/general-t4/best
-  python compare.py results/dev/general_$d.json results/dev/flash_$d.json
+  python scripts/compare.py results/dev/general_$d.json results/dev/flash_$d.json
 done
 # multi-column only: add --where columns=2 to both bench_dev runs
-python bench_olmocr.py --bench olmOCR-bench/bench_data --name general_s300 --sample 300 \
+python scripts/bench_olmocr.py --bench olmOCR-bench/bench_data --name general_s300 --sample 300 \
     --adapter runs/general-t4/best --batch-size 4 --max-new-tokens 6000
-python compare.py results/olmocr/general_s300.json results/olmocr/flash_s300.json
+python scripts/compare.py results/olmocr/general_s300.json results/olmocr/flash_s300.json
 ```
 
-- `dev_loc` has no unit tests, so `compare.py` compares it on page CER only.
+- `dev_loc` has no unit tests, so `scripts/compare.py` compares it on page CER only.
 - For the rendered dev sets, it compares unit tests and CER.
 
 **If G2 fails:** stop the general climb, and ship Tier A with its efficiency results.
@@ -255,7 +255,7 @@ python compare.py results/olmocr/general_s300.json results/olmocr/flash_s300.jso
 - The full arXiv pages in `data/rl_synthmix` need several thousand output tokens per sample. Use them only with the `a100` profile.
 
 ```bash
-python make_rl_set.py --labels data/resumes/labels.jsonl data/render_old/labels.jsonl data/render_layout/labels.jsonl \
+python scripts/make_rl_set.py --labels data/resumes/labels.jsonl data/render_old/labels.jsonl data/render_layout/labels.jsonl \
     --out data/rl_regions --per-page 2 --max-chars 1200
 ```
 
@@ -268,9 +268,9 @@ python make_rl_set.py --labels data/resumes/labels.jsonl data/render_old/labels.
   - **`loops`:** should stay near zero.
 
 ```bash
-torchrun --nproc_per_node 2 train_rl.py --profile t4 --adapter runs/general-t4/best \
+torchrun --nproc_per_node 2 scripts/train_rl.py --profile t4 --adapter runs/general-t4/best \
     --data data/rl_regions/labels.jsonl --out runs/rl-pilot --steps 50 --eval-every 25 --dump-every 25
-torchrun --nproc_per_node 2 train_rl.py --profile t4 --adapter runs/general-t4/best \
+torchrun --nproc_per_node 2 scripts/train_rl.py --profile t4 --adapter runs/general-t4/best \
     --data data/rl_regions/labels.jsonl --out runs/rl-t4 --steps 400 --resume
 ```
 
@@ -281,16 +281,16 @@ torchrun --nproc_per_node 2 train_rl.py --profile t4 --adapter runs/general-t4/b
 **3. Decide G3.**
 
 ```bash
-python bench_olmocr.py --bench olmOCR-bench/bench_data --name rl_s300 --sample 300 \
+python scripts/bench_olmocr.py --bench olmOCR-bench/bench_data --name rl_s300 --sample 300 \
     --adapter runs/rl-t4/best --batch-size 4 --max-new-tokens 6000
-python compare.py results/olmocr/rl_s300.json results/olmocr/chandra2_s300.json     # Tier B
-python compare.py results/olmocr/rl_s300.json results/olmocr/surya2_s300.json       # Tier B
-python compare.py results/olmocr/rl_s300.json results/olmocr/flash_s300.json
-python bench_resume.py run --bench resume_bench --name rl_v1 --adapter runs/rl-t4/best   # Tier A must still hold
+python scripts/compare.py results/olmocr/rl_s300.json results/olmocr/chandra2_s300.json     # Tier B
+python scripts/compare.py results/olmocr/rl_s300.json results/olmocr/surya2_s300.json       # Tier B
+python scripts/compare.py results/olmocr/rl_s300.json results/olmocr/flash_s300.json
+python scripts/bench_resume.py run --bench resume_bench --name rl_v1 --adapter runs/rl-t4/best   # Tier A must still hold
 
 # OmniDocBench: predictions for the same page subset, scored with its official code
-python bench_omnidoc.py --images OmniDocBench/images --name flash_od --limit 300
-python bench_omnidoc.py --images OmniDocBench/images --name rl_od --limit 300 --adapter runs/rl-t4/best
+python scripts/bench_omnidoc.py --images OmniDocBench/images --name flash_od --limit 300
+python scripts/bench_omnidoc.py --images OmniDocBench/images --name rl_od --limit 300 --adapter runs/rl-t4/best
 ```
 
 **If G3 fails:** claim only what passed. Run one more RL round only while the dev reward is still rising.
@@ -309,16 +309,16 @@ python bench_omnidoc.py --images OmniDocBench/images --name rl_od --limit 300 --
 - **Quantising:** needs a CUDA GPU. Re-run every benchmark on the quantised copy, because its numbers are the consumer-GPU numbers.
 
 ```bash
-python merge_lora.py --adapter runs/rl-t4/best --out models/folio-v1
-python merge_lora.py --adapter runs/general-t4/best runs/rl-t4/best --weights 0.5 0.5 --out models/folio-avg
-python bench_dev.py --labels data/dev_old/labels.jsonl --tests data/dev_old/tests.jsonl --name v1_dev --model models/folio-v1
-python bench_dev.py --labels data/dev_old/labels.jsonl --tests data/dev_old/tests.jsonl --name avg_dev --model models/folio-avg
-python compare.py results/dev/avg_dev.json results/dev/v1_dev.json
+python scripts/merge_lora.py --adapter runs/rl-t4/best --out models/folio-v1
+python scripts/merge_lora.py --adapter runs/general-t4/best runs/rl-t4/best --weights 0.5 0.5 --out models/folio-avg
+python scripts/bench_dev.py --labels data/dev_old/labels.jsonl --tests data/dev_old/tests.jsonl --name v1_dev --model models/folio-v1
+python scripts/bench_dev.py --labels data/dev_old/labels.jsonl --tests data/dev_old/tests.jsonl --name avg_dev --model models/folio-avg
+python scripts/compare.py results/dev/avg_dev.json results/dev/v1_dev.json
 
-python merge_lora.py quantize --model models/folio-v1 --out models/folio-v1-nf4 --bits 4
-python bench_olmocr.py --bench olmOCR-bench/bench_data --name v1_nf4_s300 --sample 300 --model models/folio-v1-nf4
-python speed_test.py --images bench_cache/long1288 --pages 20 --name v1_t4 --model models/folio-v1 --batch-size 4
-python speed_test.py --images bench_cache/long1288 --pages 20 --name v1_nf4_t4 --model models/folio-v1-nf4 --batch-size 4
+python scripts/merge_lora.py quantize --model models/folio-v1 --out models/folio-v1-nf4 --bits 4
+python scripts/bench_olmocr.py --bench olmOCR-bench/bench_data --name v1_nf4_s300 --sample 300 --model models/folio-v1-nf4
+python scripts/speed_test.py --images bench_cache/long1288 --pages 20 --name v1_t4 --model models/folio-v1 --batch-size 4
+python scripts/speed_test.py --images bench_cache/long1288 --pages 20 --name v1_nf4_t4 --model models/folio-v1-nf4 --batch-size 4
 ```
 
 **2. The holdout:**
@@ -328,25 +328,25 @@ python speed_test.py --images bench_cache/long1288 --pages 20 --name v1_nf4_t4 -
 - Every test must be marked `verified` or `rejected`; `--status` says when the set is ready.
 
 ```bash
-python draft_holdout_tests.py --src holdout_src --out holdout --engine openai --api-base http://localhost:8000/v1 \
+python scripts/draft_holdout_tests.py --src holdout_src --out holdout --engine openai --api-base http://localhost:8000/v1 \
     --api-model infly/Infinity-Parser2-Pro --api-prompt doc2json        # or --engine folio (Flash) on a free GPU
-python draft_holdout_tests.py --out holdout --status
-python bench_olmocr.py --bench holdout/bench_data --name v1_holdout --model models/folio-v1
-python bench_olmocr.py --bench holdout/bench_data --name flash_holdout
-python compare.py results/olmocr/v1_holdout.json results/olmocr/flash_holdout.json
+python scripts/draft_holdout_tests.py --out holdout --status
+python scripts/bench_olmocr.py --bench holdout/bench_data --name v1_holdout --model models/folio-v1
+python scripts/bench_olmocr.py --bench holdout/bench_data --name flash_holdout
+python scripts/compare.py results/olmocr/v1_holdout.json results/olmocr/flash_holdout.json
 ```
 
 **Pass:**
 
 - The holdout difference (ours − Flash) has the same sign as on olmOCR-Bench, and its interval overlaps the public one.
-- `dedup.py check` finds no matches in the clean files you trained on.
+- `scripts/dedup.py check` finds no matches in the clean files you trained on.
 - The data card lists no source with an unknown licence.
 - Non-commercial sources are named on the model card.
 
 **3. The model card.** Every number on it comes from a result file.
 
 ```bash
-python make_model_card.py --name folio-ocr-v1 --model-dir models/folio-v1 --sft-run runs/general-t4 --rl-run runs/rl-t4 \
+python scripts/make_model_card.py --name folio-ocr-v1 --model-dir models/folio-v1 --sft-run runs/general-t4 --rl-run runs/rl-t4 \
     --olmocr results/olmocr/rl_s300.json --olmocr-baseline results/olmocr/flash_s300.json \
         results/olmocr/chandra2_s300.json results/olmocr/surya2_s300.json \
     --resume results/resume/rl_v1.json --resume-baseline results/resume/flash.json results/resume/chandra2.json \
@@ -366,12 +366,12 @@ Real pages without a source become training data only when two permissively lice
 On free GPUs, Flash itself can be one of the two teachers (`--engine folio`). The other can be any endpoint whose terms allow training on its output.
 
 ```bash
-python label_teachers.py stage --inputs my_scans/ --stage teach/pages
-python label_teachers.py run --stage teach/pages --name flash --licence Apache-2.0 --cache teach/flash --engine folio
-python label_teachers.py run --stage teach/pages --name olmocr2 --licence Apache-2.0 --cache teach/olmocr2 \
+python scripts/label_teachers.py stage --inputs my_scans/ --stage teach/pages
+python scripts/label_teachers.py run --stage teach/pages --name flash --licence Apache-2.0 --cache teach/flash --engine folio
+python scripts/label_teachers.py run --stage teach/pages --name olmocr2 --licence Apache-2.0 --cache teach/olmocr2 \
     --engine openai --api-base http://localhost:8001/v1 --api-model allenai/olmOCR-2-7B-1025 --api-prompt olmocr
-python label_teachers.py merge --stage teach/pages --a teach/flash --b teach/olmocr2 --out data/consensus
+python scripts/label_teachers.py merge --stage teach/pages --a teach/flash --b teach/olmocr2 --out data/consensus
 ```
 
 - Pages where the teachers disagree go to `data/consensus/review.jsonl`.
-- Run `dedup.py check` on `data/consensus/labels.jsonl` like any other source.
+- Run `scripts/dedup.py check` on `data/consensus/labels.jsonl` like any other source.
