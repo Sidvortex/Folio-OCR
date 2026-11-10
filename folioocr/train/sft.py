@@ -46,6 +46,9 @@ def build_args(argv=None):
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--resume", action="store_true")
     ap.add_argument("--no-fence", action="store_true", help="train doc2json targets without ```json fences")
+    ap.add_argument("--label-style", default="flash", choices=["flash", "markdown"],
+                    help="doc2json text: flash = plain, as Flash writes it (default); markdown = # headings, "
+                         "**bold**, - bullets")
     for k in ("load_4bit", "full"):
         ap.add_argument(f"--{k.replace('_', '-')}", dest=k, action="store_true", default=None)
         ap.add_argument(f"--no-{k.replace('_', '-')}", dest=k, action="store_false")
@@ -122,7 +125,7 @@ def main(argv=None) -> None:
     sources = parse_sources(args.data, split="train")
     length = args.samples_per_epoch or sum(len(r) for r, _ in sources)
     train_ds = PageDataset(sources, processor, task_mix, max_pixels=args.max_pixels, max_length=args.max_length,
-                           fence=not args.no_fence, length=length, seed=args.seed)
+                           fence=not args.no_fence, length=length, seed=args.seed, style=args.label_style)
     print(f"train pages: {sum(len(r) for r, _ in sources)} in {len(sources)} source(s); epoch = {length} samples")
     dev = read_labels(args.dev, split="dev") if args.dev else []
     dev_tests = load_tests_jsonl(args.dev_tests) if args.dev_tests else None

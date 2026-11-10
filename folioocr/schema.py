@@ -66,13 +66,39 @@ def denormalize_bbox(bbox: Sequence[float], width: float, height: float) -> List
 
 # --------------------------------------------------------------- serialise
 def dump_target(blocks: Iterable, fence: bool = True) -> str:
-    """Training target / canonical text form: one block per line, optionally fenced.
-
-    ``json.dumps`` default separators give ``{"bbox": [...`` -- the prefix the
-    Infinity-Parser2 post-processor (and ``parse_output``) search for."""
+    """Training target / canonical text form, laid out exactly as Infinity-Parser2-Flash
+    writes it (seen on its own output): the whole list on one line, items joined by
+    ``", "``, inside a ```` ```json ```` fence. ``json.dumps`` default separators give
+    ``{"bbox": [...`` -- the prefix Infinity-Parser2's post-processor searches for."""
     items = [b.to_dict() if isinstance(b, Block) else Block.from_dict(b).to_dict() for b in blocks]
-    body = "[\n" + ",\n".join(json.dumps(it, ensure_ascii=False) for it in items) + "\n]" if items else "[]"
+    body = "[" + ", ".join(json.dumps(it, ensure_ascii=False) for it in items) + "]"
     return f"```json\n{body}\n```" if fence else body
+
+
+_MATH_SPAN = re.compile(r"(\$\$.+?\$\$|\$[^$\n]+\$)", re.S)
+_HEADING_MARK = re.compile(r"^#{1,6}\s+")
+_STRONG_MARK = re.compile(r"\*\*(.+?)\*\*", re.S)
+_EM_MARK = re.compile(r"(?<![\w*])\*(?=\S)(.+?)(?<=\S)\*(?![\w*])", re.S)
+_BULLET_MARK = re.compile(r"^- ", re.M)
+
+
+def plain_style(block: "Block") -> "Block":
+    """Text the way Flash writes it in doc2json: titles without ``#``, no ``**``/``*``
+    emphasis, no ``- `` bullet markers (numbered items keep their visible numbers).
+    Tables, formulas and figures are unchanged; math spans are left alone."""
+    if block.category in ("table", "formula", "figure") or not block.text:
+        return block
+    parts = _MATH_SPAN.split(block.text)
+    for i in range(0, len(parts), 2):                 # even parts are outside math
+        t = parts[i]
+        t = _STRONG_MARK.sub(r"\1", t)
+        t = _EM_MARK.sub(r"\1", t)
+        t = _BULLET_MARK.sub("", t)
+        parts[i] = t
+    text = "".join(parts)
+    if block.category == "title":
+        text = _HEADING_MARK.sub("", text)
+    return Block(list(block.bbox), block.category, text)
 
 
 @dataclass

@@ -43,11 +43,14 @@ def test_special_ids_include_both_stop_tokens(tiny_model):
 
 def test_dataset_masks_prompt_and_supervises_target(tiny_model, page_record):
     model, proc = load_model(ModelConfig(model=tiny_model, dtype="float32"), for_training=True)
-    ds = PageDataset([([page_record], 1.0)], proc, {"doc2json": 1.0}, max_pixels=40_000, max_length=4096)
+    ds = PageDataset([([page_record], 1.0)], proc, {"doc2json": 1.0}, max_pixels=40_000, max_length=4096, style="markdown")
     ex = ds[0]
     sup = [t for t, l in zip(ex["input_ids"], ex["labels"]) if l != -100]
     text = proc.tokenizer.decode(sup)
-    assert text.startswith("```json\n[\n{\"bbox\": [62, 50, 600, 120]") and text.endswith("<|im_end|>")
+    assert text.startswith("```json\n[{\"bbox\": [62, 50, 600, 120]") and text.endswith("<|im_end|>")
+    flash = PageDataset([([page_record], 1.0)], proc, {"doc2json": 1.0}, max_pixels=40_000, max_length=4096)
+    assert flash.target(page_record, "doc2json") == dump_target(
+        [Block([62, 50, 600, 120], "title", "Asha"), Block([62, 160, 940, 300], "text", "SQL\nGo")])
     assert ex["labels"][: len(ex["labels"]) - len(sup)] == [-100] * (len(ex["labels"]) - len(sup))
     batch = Collator(proc.tokenizer.pad_token_id)([ex, ds[0]])
     ref = model(**batch).loss
@@ -57,10 +60,10 @@ def test_dataset_masks_prompt_and_supervises_target(tiny_model, page_record):
 
 def test_long_targets_lose_whole_blocks(tiny_model, page_record):
     _, proc = load_model(ModelConfig(model=tiny_model, dtype="float32"))
-    full = PageDataset([([page_record], 1.0)], proc, {"doc2json": 1.0}, max_pixels=40_000, max_length=8192)[0]
+    full = PageDataset([([page_record], 1.0)], proc, {"doc2json": 1.0}, max_pixels=40_000, max_length=8192, style="markdown")[0]
     n_prompt = sum(1 for l in full["labels"] if l == -100)
     one = len(proc.tokenizer(dump_target([Block.from_dict(BLOCKS[0])]), add_special_tokens=False)["input_ids"])
-    ds = PageDataset([([page_record], 1.0)], proc, {"doc2json": 1.0}, max_pixels=40_000, max_length=n_prompt + one + 3)
+    ds = PageDataset([([page_record], 1.0)], proc, {"doc2json": 1.0}, max_pixels=40_000, max_length=n_prompt + one + 3, style="markdown")
     ex = ds[0]
     short = dump_target([Block.from_dict(BLOCKS[0])])
     n_tail = len(proc.tokenizer(short, add_special_tokens=False)["input_ids"]) + 1
@@ -68,7 +71,7 @@ def test_long_targets_lose_whole_blocks(tiny_model, page_record):
     assert seen == short + "<|im_end|>"                       # the input is still valid JSON, one block dropped
     sup = proc.tokenizer.decode([t for t, l in zip(ex["input_ids"], ex["labels"]) if l != -100])
     # ...but its closing and the end-of-turn get no loss: the page did not end there
-    assert short.startswith(sup) and len(sup) >= short.rfind("\n]") - 2 and "<|im_end|>" not in sup
+    assert short.startswith(sup) and len(sup) >= short.rfind("]") - 2 and "<|im_end|>" not in sup
     assert ex["labels"][-1] == -100
     assert ds.dropped_blocks == 1
 
@@ -80,7 +83,7 @@ def test_overfit_one_page_then_parse_it_back(tiny_model, page_record):
     for name, p in model.named_parameters():       # tiny random base: let it learn everything
         if "language_model" in name or "lm_head" in name or "embed_tokens" in name:
             p.requires_grad_(True)
-    ds = PageDataset([([page_record], 1.0)], proc, {"doc2json": 1.0}, max_pixels=40_000, max_length=4096)
+    ds = PageDataset([([page_record], 1.0)], proc, {"doc2json": 1.0}, max_pixels=40_000, max_length=4096, style="markdown")
     batch = Collator(proc.tokenizer.pad_token_id)([ds[0]])
     opt = torch.optim.AdamW([p for p in model.parameters() if p.requires_grad], lr=3e-3)
     model.train()

@@ -33,9 +33,21 @@ def test_dump_parse_roundtrip():
         assert [b.to_dict() for b in r.blocks] == [b.to_dict() for b in bl]
 
 
-def test_dump_starts_like_infinity_parser_output():
-    # infinity_parser2's post-processor searches for '{"bbox":' to cut truncated output
-    assert '{"bbox": [' in dump_target(_blocks())
+def test_dump_matches_flash_output_layout():
+    # Flash's own doc2json output (seen on Kaggle): ```json\n[{"bbox": ...}, {"bbox": ...}]\n```
+    t = dump_target(_blocks())
+    assert t.startswith('```json\n[{"bbox": [') and t.endswith('}]\n```') and '}, {"bbox": [' in t
+    assert "\n" not in t[len("```json\n"):-len("\n```")]
+
+
+def test_plain_style_matches_flash_text():
+    from folioocr.schema import plain_style
+    b = plain_style(Block([0, 0, 10, 10], "title", "## Experience"))
+    assert b.text == "Experience"
+    t = plain_style(Block([0, 0, 10, 10], "text", "**Data Intern**, *Acme* (2025)\n- Built $\\theta^{*}$ model\n- 2 * 3 = 6\n1. First"))
+    assert t.text == "Data Intern, Acme (2025)\nBuilt $\\theta^{*}$ model\n2 * 3 = 6\n1. First"
+    tab = Block([0, 0, 10, 10], "table", "<table><tr><td>**x**</td></tr></table>")
+    assert plain_style(tab).text == tab.text
 
 
 def test_parse_repairs_truncated_and_bad_items():

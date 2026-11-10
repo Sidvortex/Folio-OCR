@@ -26,7 +26,7 @@ from PIL import Image
 
 from .. import prompts
 from ..imaging import MIN_PIXELS, PIXELS_PER_TOKEN, fit_image
-from ..schema import Block, dump_target, to_markdown
+from ..schema import Block, dump_target, plain_style, to_markdown
 
 
 def read_labels(path: str, split: Optional[str] = None) -> List[dict]:
@@ -64,7 +64,7 @@ class PageDataset:
 
     def __init__(self, sources: List[Tuple[List[dict], float]], processor, task_mix: Dict[str, float],
                  max_pixels: int, min_pixels: int = MIN_PIXELS, max_length: int = 8192, fence: bool = True,
-                 length: Optional[int] = None, seed: int = 0):
+                 length: Optional[int] = None, seed: int = 0, style: str = "flash"):
         self.sources = [s for s in sources if s[0]]
         self.processor = processor
         self.tok = processor.tokenizer
@@ -76,6 +76,7 @@ class PageDataset:
         self.fence = fence
         self.length = length or sum(len(r) for r, _ in self.sources)
         self.seed = seed
+        self.style = style                 # flash: doc2json text written the way Flash writes it
         self.im_end = self.tok.convert_tokens_to_ids("<|im_end|>")
         self.dropped_blocks = 0
 
@@ -97,7 +98,11 @@ class PageDataset:
         if "blocks" not in rec:
             return rec["markdown"]
         blocks = [Block.from_dict(b) for b in rec["blocks"]][:n_blocks]
-        return dump_target(blocks, fence=self.fence) if task == "doc2json" else to_markdown(blocks)
+        if task != "doc2json":
+            return to_markdown(blocks)
+        if self.style == "flash":
+            blocks = [plain_style(b) for b in blocks]
+        return dump_target(blocks, fence=self.fence)
 
     def _prompt(self, rec: dict, task: str, max_pixels: int):
         img = fit_image(Image.open(rec["_image"]), max_pixels, self.min_pixels)
@@ -141,7 +146,7 @@ class PageDataset:
             # and the end-of-turn token get no loss
             keep = len(tgt)
             if task == "doc2json" and "blocks" in rec and len(tgt) <= budget:
-                close = text.rfind("\n]")
+                close = text.rfind("]")
                 if close > 0:
                     keep = max(0, len(self.tok(text[:close], add_special_tokens=False)["input_ids"]) - 1)
             tail = tgt[:keep] + [-100] * (len(tgt) - keep) + [-100]

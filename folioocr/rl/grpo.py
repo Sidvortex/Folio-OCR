@@ -34,7 +34,7 @@ from pathlib import Path
 from typing import Callable, Dict, List, Optional, Sequence, Tuple
 
 from .. import prompts
-from ..schema import Block, dump_target
+from ..schema import Block, dump_target, plain_style
 from .rewards import RewardConfig, score as reward_score
 
 
@@ -123,7 +123,7 @@ def group_advantages(rewards: Sequence[float], scale: str = "group", eps: float 
 
 def reference_tokens(item: dict, tokenizer, fence: bool = True) -> Optional[int]:
     if item.get("blocks"):
-        text = dump_target([Block.from_dict(b) for b in item["blocks"]], fence=fence)
+        text = dump_target([plain_style(Block.from_dict(b)) for b in item["blocks"]], fence=fence)
     elif item.get("markdown"):
         text = item["markdown"]
     else:
